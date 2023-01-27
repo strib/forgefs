@@ -2,9 +2,9 @@ package forgefs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
-
 	"net/http"
 )
 
@@ -26,17 +26,17 @@ func NewDoKAPI(addr, apiKey string) *DoKAPI {
 	}
 }
 
-func (da *DoKAPI) GetCards(ctx context.Context) (jsonString string, err error) {
+func (da *DoKAPI) GetCards(ctx context.Context) (cards []Card, err error) {
 	req, err := http.NewRequestWithContext(
 		ctx, "GET", da.baseURL+"v1/cards", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Add(apiKeyHeader, da.apiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer func() {
 		closeErr := resp.Body.Close()
@@ -45,11 +45,15 @@ func (da *DoKAPI) GetCards(ctx context.Context) (jsonString string, err error) {
 		}
 	}()
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("Error: %s", resp.Status)
+		return nil, fmt.Errorf("Error: %s", resp.Status)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(body), nil
+	err = json.Unmarshal(body, &cards)
+	if err != nil {
+		return nil, err
+	}
+	return cards, nil
 }
