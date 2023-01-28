@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/strib/forgefs"
 )
 
@@ -14,6 +15,7 @@ var apiKey = flag.String("api-key", "", "Your decksofkeyforge API key")
 var addr = flag.String(
 	"addr", "https://decksofkeyforge.com", "The decksofkeyforge host address")
 var dbFile = flag.String("db-file", ".forgefs.sqlite", "Local database file")
+var mountpoint = flag.String("mountpoint", "ffs", "Mountpoint for forgefs")
 
 func doMain() error {
 	flag.Parse()
@@ -21,6 +23,9 @@ func doMain() error {
 		return errors.New("No API key given")
 	}
 	if dbFile == nil || *dbFile == "" {
+		return errors.New("No DB file given")
+	}
+	if mountpoint == nil || *mountpoint == "" {
 		return errors.New("No DB file given")
 	}
 
@@ -51,6 +56,13 @@ func doMain() error {
 		}
 	}
 
+	root := forgefs.NewFSRoot(s)
+	server, err := fs.Mount(*mountpoint, root, &fs.Options{})
+	if err != nil {
+		return err
+	}
+
+	server.Wait()
 	return nil
 }
 

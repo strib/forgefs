@@ -100,3 +100,71 @@ func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []Card) error {
 	}
 	return nil
 }
+
+const sqlCardNames string = `
+    SELECT id, title FROM cards;
+`
+
+func (s *SQLiteStorage) GetCardTitles(ctx context.Context) (
+	titles map[string]string, err error) {
+	titles = make(map[string]string)
+	rows, err := s.db.QueryContext(ctx, sqlCardNames)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		closeErr := rows.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
+	for rows.Next() {
+		var id, title string
+		err = rows.Scan(&id, &title)
+		if err != nil {
+			return nil, err
+		}
+		titles[id] = title
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return titles, nil
+}
+
+const sqlCardImageURL string = `
+    SELECT image_url FROM cards
+    WHERE id=?;
+`
+
+func (s *SQLiteStorage) GetCardImageURL(ctx context.Context, id string) (
+	url string, err error) {
+	row := s.db.QueryRowContext(ctx, sqlCardImageURL, id)
+	err = row.Scan(&url)
+	if err != nil {
+		return "", err
+	}
+	return url, nil
+}
+
+const sqlCardJSON string = `
+    SELECT json FROM cards
+    WHERE id=?;
+`
+
+func (s *SQLiteStorage) GetCard(ctx context.Context, id string) (
+	card *Card, err error) {
+	row := s.db.QueryRowContext(ctx, sqlCardJSON, id)
+	var cardJSON string
+	err = row.Scan(&cardJSON)
+	if err != nil {
+		return nil, err
+	}
+	var c Card
+	err = json.Unmarshal([]byte(cardJSON), &c)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
