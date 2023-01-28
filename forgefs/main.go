@@ -39,16 +39,19 @@ func doMain() error {
 
 	fmt.Printf("Found %d cards\n", count)
 
-	if count > 0 {
-		return nil
+	if count == 0 {
+		da := forgefs.NewDoKAPI(*addr, *apiKey)
+		cards, err := da.GetCards(ctx)
+		if err != nil {
+			return err
+		}
+		err = s.StoreCards(ctx, cards)
+		if err != nil {
+			return err
+		}
 	}
 
-	da := forgefs.NewDoKAPI(*addr, *apiKey)
-	cards, err := da.GetCards(ctx)
-	if err != nil {
-		return err
-	}
-	return s.StoreCards(ctx, cards)
+	return nil
 }
 
 func main() {

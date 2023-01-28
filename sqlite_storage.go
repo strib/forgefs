@@ -41,6 +41,8 @@ const sqlCardsCreate string = `
     title varchar(1024) NOT NULL,
     house varchar(64) NOT NULL,
     expansion varchar(64) NOT NULL,
+    image_url varchat(4096) NOT NULL,
+    version integer NOT NULL,
     json blob NOT NULL
 );`
 
@@ -68,8 +70,8 @@ func (s *SQLiteStorage) GetCardsCount(ctx context.Context) (
 }
 
 const sqlCardStore string = `
-    INSERT OR IGNORE INTO cards (id, title, house, expansion, json)
-    VALUES (?, ?, ?, ?, ?);
+    INSERT OR IGNORE INTO cards (id, title, house, expansion, image_url, version, json)
+    VALUES (?, ?, ?, ?, ?, ?, ?);
 `
 
 func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []Card) error {
@@ -81,7 +83,8 @@ func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []Card) error {
 
 		result, err := s.db.ExecContext(
 			ctx, sqlCardStore,
-			card.ID, card.CardTitle, card.House, card.ExpansionEnum, j)
+			card.ID, card.CardTitle, card.House, card.ExpansionEnum,
+			card.FrontImage, card.ExtraCardInfo.Version, j)
 		if err != nil {
 			return err
 		}
