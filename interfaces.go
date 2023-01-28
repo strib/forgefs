@@ -107,6 +107,60 @@ type Card struct {
 	Wins             int                      `json:"wins,omitempty"`
 }
 
+type CardInDeck struct {
+	CardTitle string `json:"cardTitle,omitempty"`
+	Rarity    string `json:"rarity,omitempty"`
+	Legacy    bool   `json:"legacy,omitempty"`
+	Maverick  bool   `json:"maverick,omitempty"`
+	Anomaly   bool   `json:"anomaly,omitempty"`
+}
+
+type HouseInDeck struct {
+	House string       `json:"house,omitempty"`
+	Cards []CardInDeck `json:"cards,omitempty"`
+}
+
+type DeckInfo struct {
+	ActionCount            int           `json:actionCount",omitempty"`
+	AercScore              int           `json:"aercScore,omitempty"`
+	AercVersion            int           `json:"aercVersion,omitempty"`
+	AmberControl           float64       `json:"amberControl,omitempty"`
+	AntisynergyRating      int           `json:"antisynergyRating,omitempty"`
+	ArtifactControl        float64       `json:"artifactControl,omitempty"`
+	CreatureControl        float64       `json:"creatureControl,omitempty"`
+	CreatureCount          int           `json:"creatureCount,omitempty"`
+	CreatureProtection     float64       `json:creatureProtection",omitempty"`
+	DateAdded              string        `json:"dateAdded,omitempty"`
+	Disruption             float64       `json:"disruption,omitempty"`
+	EffectivePower         int           `json:"effectivePower,omitempty"`
+	Efficiency             float64       `json:"efficiency,omitempty"`
+	EfficiencyBonus        float64       `json:"efficiencyBonus,omitempty"`
+	Expansion              string        `json:"expansion,omitempty"`
+	ExpectedAmber          float64       `json:"expectedAmber,omitempty"`
+	Houses                 []HouseInDeck `json:"housesAndCards,omitempty"`
+	ID                     int           `json:"id,omitempty"`
+	KeyforgeID             string        `json:"keyforgeId,omitempty"`
+	LastSasUpdate          string        `json:"lastSasUpdate,omitempty"`
+	Name                   string        `json:"name,omitempty"`
+	PreviousMajorSasRating int           `json:"previousMajorSasRating,omitempty"`
+	PreviousSasRating      int           `json:"previosSasRating,omitempty"`
+	RawAmber               int           `json:"rawAmber,omitempty"`
+	SasPercentile          float64       `json:sasPercentile",omitempty"`
+	SasRating              int           `json:"sasRating,omitempty"`
+	SynergyRating          int           `json:"synergyRating,omitempty"`
+	TotalArmor             int           `json:"totalArmor,omitempty"`
+	TotalPower             int           `json:"totalPower,omitempty"`
+}
+
+type Deck struct {
+	DeckInfo  DeckInfo `json:"deck,omitempty"`
+	Funny     bool     `json:"funny,omitempty"`
+	Notes     string   `json:"notes,omitempty"`
+	OwnedByMe bool     `json:"ownedByMe,omitempty"`
+	Wishlist  bool     `json:"wishlist,omitempty"`
+}
+
 type DataFetcher interface {
 	GetCards(ctx context.Context) ([]Card, error)
+	GetDecks(ctx context.Context) ([]Deck, error)
 }

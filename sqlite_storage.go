@@ -46,8 +46,26 @@ const sqlCardsCreate string = `
     json blob NOT NULL
 );`
 
+const sqlDecksCreate string = `
+    CREATE TABLE IF NOT EXISTS decks (
+    id varchar(36) NOT NULL PRIMARY KEY,
+    name varchar(1024) NOT NULL,
+    expansion varchar(64) NOT NULL,
+    sas integer NOT NULL,
+    sas_version integer NOT NULL,
+    owned_by_me boolean NOT NULL,
+    funny boolean NOT NULL,
+    wish_list boolean NOT NULL,
+    json blob NOT NULL
+);`
+
 func (s *SQLiteStorage) init(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, sqlCardsCreate)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.ExecContext(ctx, sqlDecksCreate)
 	if err != nil {
 		return err
 	}
@@ -167,4 +185,106 @@ func (s *SQLiteStorage) GetCard(ctx context.Context, id string) (
 		return nil, err
 	}
 	return &c, nil
+}
+
+const sqlDecksCount string = `
+    SELECT COUNT(*) FROM decks;
+`
+
+func (s *SQLiteStorage) GetDecksCount(ctx context.Context) (
+	count int, err error) {
+	row := s.db.QueryRowContext(ctx, sqlDecksCount)
+	err = row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+const sqlDeckStore string = `
+    INSERT OR REPLACE INTO decks (id, name, expansion, sas, sas_version, owned_by_me, funny, wish_list, json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+`
+
+func (s *SQLiteStorage) StoreDecks(ctx context.Context, decks []Deck) error {
+	for _, deck := range decks {
+		j, err := json.Marshal(deck)
+		if err != nil {
+			return err
+		}
+
+		result, err := s.db.ExecContext(
+			ctx, sqlDeckStore,
+			deck.DeckInfo.KeyforgeID, deck.DeckInfo.Name,
+			deck.DeckInfo.Expansion, deck.DeckInfo.SasRating,
+			deck.DeckInfo.AercVersion, deck.OwnedByMe, deck.Funny,
+			deck.Wishlist, j)
+		if err != nil {
+			return err
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if rowsAffected != 1 {
+			return errors.New("deck not inserted")
+		}
+	}
+	return nil
+}
+
+const sqlMyDeckNames string = `
+    SELECT id, name FROM decks
+    WHERE owned_by_me = 1;
+`
+
+func (s *SQLiteStorage) GetMyDeckNames(ctx context.Context) (
+	names map[string]string, err error) {
+	names = make(map[string]string)
+	rows, err := s.db.QueryContext(ctx, sqlMyDeckNames)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		closeErr := rows.Close()
+		if err == nil {
+			err = closeErr
+		}
+	}()
+	for rows.Next() {
+		var id, name string
+		err = rows.Scan(&id, &name)
+		if err != nil {
+			return nil, err
+		}
+		names[id] = name
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return names, nil
+}
+
+const sqlDeckJSON string = `
+    SELECT json FROM decks
+    WHERE id=?;
+`
+
+func (s *SQLiteStorage) GetDeck(ctx context.Context, id string) (
+	deck *Deck, err error) {
+	row := s.db.QueryRowContext(ctx, sqlDeckJSON, id)
+	var deckJSON string
+	err = row.Scan(&deckJSON)
+	if err != nil {
+		return nil, err
+	}
+	var d Deck
+	err = json.Unmarshal([]byte(deckJSON), &d)
+	if err != nil {
+		return nil, err
+	}
+	return &d, nil
 }

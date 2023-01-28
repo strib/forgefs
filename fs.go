@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -13,37 +12,15 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 )
 
-func getImageFile(ctx context.Context, imageURL string) (
-	data []byte, err error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", imageURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		closeErr := resp.Body.Close()
-		if err == nil {
-			err = closeErr
-		}
-	}()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("Error: %s", resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
-}
+const (
+	numCardsInHouse = 12
+)
 
 type FSCard struct {
 	fs.Inode
 	s  *SQLiteStorage
 	id string
+	im *ImageManager
 }
 
 var _ fs.InodeEmbedder = (*FSCard)(nil)
@@ -52,6 +29,11 @@ var _ fs.NodeReaddirer = (*FSCard)(nil)
 
 func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
+	n := c.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
 	switch name {
 	case cardJSONFilename:
 		card, err := c.s.GetCard(ctx, c.id)
@@ -65,27 +47,32 @@ func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		cardJSON = append(cardJSON, '\n')
 
 		out.Size = uint64(len(cardJSON))
-		return c.NewInode(ctx, &fs.MemRegularFile{
+		n = c.NewInode(ctx, &fs.MemRegularFile{
 			Data: cardJSON,
-		}, fs.StableAttr{}), 0
+		}, fs.StableAttr{})
 	default:
 		imageURL, err := c.s.GetCardImageURL(ctx, c.id)
 		if err != nil {
 			return nil, fs.ToErrno(err)
 		}
-		if strings.HasPrefix(name, cardImagePrefix) {
-			data, err := getImageFile(ctx, imageURL)
-			if err != nil {
-				return nil, fs.ToErrno(err)
-			}
-			out.Size = uint64(len(data))
-			return c.NewInode(ctx, &fs.MemRegularFile{
-				Data: data,
-			}, fs.StableAttr{}), 0
+		if !strings.HasPrefix(name, cardImagePrefix) {
+			return nil, syscall.ENOENT
 		}
-
-		return nil, syscall.ENOENT
+		data, err := c.im.GetCardImage(ctx, c.id, imageURL)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+		out.Size = uint64(len(data))
+		n = c.NewInode(ctx, &fs.MemRegularFile{
+			Data: data,
+		}, fs.StableAttr{})
 	}
+
+	ok := c.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+	return n, 0
 }
 
 func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
@@ -99,8 +86,6 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 		suffix = split[len(split)-1]
 	}
 
-	// XXX: get image URL from DB, figure out suffix, and append to
-	// the card image prefix for the name.
 	entries := []fuse.DirEntry{
 		{
 			Name: cardJSONFilename,
@@ -112,53 +97,413 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	return fs.NewListDirStream(entries), 0
 }
 
-// FSRoot is the root of the file system.
-type FSRoot struct {
+type FSCardsDir struct {
 	fs.Inode
-	s *SQLiteStorage
+	s  *SQLiteStorage
+	im *ImageManager
 
 	cards map[string]string
 }
 
-func NewFSRoot(s *SQLiteStorage) *FSRoot {
-	return &FSRoot{
+func NewFSCardsDir(
+	ctx context.Context, s *SQLiteStorage, im *ImageManager) (
+	*FSCardsDir, error) {
+	cd := &FSCardsDir{
 		s:     s,
+		im:    im,
 		cards: make(map[string]string),
 	}
+	titles, err := cd.s.GetCardTitles(ctx)
+	if err != nil {
+		return nil, fs.ToErrno(err)
+	}
+	for id, title := range titles {
+		cd.cards[title] = id
+	}
+	return cd, nil
 }
 
-var _ fs.InodeEmbedder = (*FSRoot)(nil)
-var _ fs.NodeLookuper = (*FSRoot)(nil)
-var _ fs.NodeReaddirer = (*FSRoot)(nil)
+var _ fs.InodeEmbedder = (*FSCardsDir)(nil)
+var _ fs.NodeLookuper = (*FSCardsDir)(nil)
+var _ fs.NodeReaddirer = (*FSCardsDir)(nil)
 
-func (r *FSRoot) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
+func (cd *FSCardsDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
-	id, ok := r.cards[name]
+	n := cd.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
+	id, ok := cd.cards[name]
 	if !ok {
 		return nil, syscall.ENOENT
 	}
 
-	return r.NewInode(ctx, &FSCard{
-		s:  r.s,
+	n = cd.NewInode(ctx, &FSCard{
+		s:  cd.s,
 		id: id,
+		im: cd.im,
 	}, fs.StableAttr{
 		Mode: syscall.S_IFDIR,
-	}), 0
+	})
+
+	ok = cd.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+	return n, 0
 }
 
-func (r *FSRoot) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
-	titles, err := r.s.GetCardTitles(ctx)
-	if err != nil {
-		return nil, fs.ToErrno(err)
-	}
-	entries := make([]fuse.DirEntry, 0, len(titles))
-	for id, title := range titles {
+func (cd *FSCardsDir) Readdir(ctx context.Context) (
+	fs.DirStream, syscall.Errno) {
+	entries := make([]fuse.DirEntry, 0, len(cd.cards))
+	for title := range cd.cards {
 		entries = append(entries, fuse.DirEntry{
 			Mode: syscall.S_IFDIR,
 			Name: title,
 		})
-		r.cards[title] = id
 	}
 
 	return fs.NewListDirStream(entries), 0
+}
+
+type FSDeckHouseDir struct {
+	fs.Inode
+
+	d     *Deck
+	house string
+}
+
+var _ fs.InodeEmbedder = (*FSDeckHouseDir)(nil)
+var _ fs.NodeLookuper = (*FSDeckHouseDir)(nil)
+var _ fs.NodeReaddirer = (*FSDeckHouseDir)(nil)
+
+func (dh *FSDeckHouseDir) Lookup(
+	ctx context.Context, name string, out *fuse.EntryOut) (
+	*fs.Inode, syscall.Errno) {
+	n := dh.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
+	i, err := strconv.Atoi(name)
+	if err != nil {
+		return nil, syscall.ENOENT
+	}
+
+	var house HouseInDeck
+	for _, h := range dh.d.DeckInfo.Houses {
+		if h.House == dh.house {
+			house = h
+		}
+	}
+	if i > len(house.Cards) || i < 0 {
+		return nil, syscall.ENOENT
+	}
+
+	n = dh.NewInode(ctx, &fs.MemSymlink{
+		Data: []byte("../../../../cards/" + house.Cards[i-1].CardTitle),
+	}, fs.StableAttr{
+		Mode: syscall.S_IFLNK,
+	})
+
+	ok := dh.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+	return n, 0
+}
+
+func (mdd *FSDeckHouseDir) Readdir(ctx context.Context) (
+	fs.DirStream, syscall.Errno) {
+	entries := make([]fuse.DirEntry, 0, numCardsInHouse)
+	for i := 1; i <= numCardsInHouse; i++ {
+		entries = append(entries, fuse.DirEntry{
+			Mode: syscall.S_IFLNK,
+			Name: fmt.Sprintf("%02d", i),
+		})
+	}
+
+	return fs.NewListDirStream(entries), 0
+}
+
+type FSDeckCardsDir struct {
+	fs.Inode
+
+	d *Deck
+}
+
+var _ fs.InodeEmbedder = (*FSDeckCardsDir)(nil)
+var _ fs.NodeLookuper = (*FSDeckCardsDir)(nil)
+var _ fs.NodeReaddirer = (*FSDeckCardsDir)(nil)
+
+func (dcd *FSDeckCardsDir) Lookup(
+	ctx context.Context, name string, out *fuse.EntryOut) (
+	*fs.Inode, syscall.Errno) {
+	n := dcd.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
+	found := false
+	for _, house := range dcd.d.DeckInfo.Houses {
+		if house.House == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, syscall.ENOENT
+	}
+
+	n = dcd.NewInode(ctx, &FSDeckHouseDir{
+		d:     dcd.d,
+		house: name,
+	}, fs.StableAttr{
+		Mode: syscall.S_IFDIR,
+	})
+
+	ok := dcd.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+	return n, 0
+}
+
+func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
+	fs.DirStream, syscall.Errno) {
+	entries := make([]fuse.DirEntry, 0, len(dcd.d.DeckInfo.Houses))
+	for _, house := range dcd.d.DeckInfo.Houses {
+		entries = append(entries, fuse.DirEntry{
+			Mode: syscall.S_IFDIR,
+			Name: house.House,
+		})
+	}
+
+	return fs.NewListDirStream(entries), 0
+}
+
+type FSDeck struct {
+	fs.Inode
+	s  *SQLiteStorage
+	da *DoKAPI
+	id string
+}
+
+var _ fs.InodeEmbedder = (*FSDeck)(nil)
+var _ fs.NodeLookuper = (*FSDeck)(nil)
+var _ fs.NodeReaddirer = (*FSDeck)(nil)
+
+func (d *FSDeck) getDeck(ctx context.Context) (*Deck, error) {
+	deck, err := d.s.GetDeck(ctx, d.id)
+	if err != nil {
+		return nil, fs.ToErrno(err)
+	}
+
+	// Lookup the houses if we don't have them yet, and cache that
+	// in the DB.
+	if len(deck.DeckInfo.Houses) == 0 {
+		newDeck, err := d.da.GetDeck(ctx, d.id)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+		deck.DeckInfo.Houses = newDeck.DeckInfo.Houses
+		err = d.s.StoreDecks(ctx, []Deck{*deck})
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+	}
+
+	return deck, nil
+}
+
+func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
+	*fs.Inode, syscall.Errno) {
+	n := d.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
+	switch name {
+	case deckJSONFilename:
+		deck, err := d.getDeck(ctx)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+
+		deckJSON, err := json.MarshalIndent(deck, "", "\t")
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+		deckJSON = append(deckJSON, '\n')
+
+		out.Size = uint64(len(deckJSON))
+		n = d.NewInode(ctx, &fs.MemRegularFile{
+			Data: deckJSON,
+		}, fs.StableAttr{})
+	case deckCardsDir:
+		deck, err := d.getDeck(ctx)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+
+		n = d.NewInode(ctx, &FSDeckCardsDir{
+			d: deck,
+		}, fs.StableAttr{
+			Mode: syscall.S_IFDIR,
+		})
+	default:
+		return nil, syscall.ENOENT
+	}
+
+	ok := d.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+	return n, 0
+}
+
+func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	entries := []fuse.DirEntry{
+		{
+			Name: deckJSONFilename,
+		},
+		{
+			Name: deckCardsDir,
+			Mode: syscall.S_IFDIR,
+		},
+	}
+	return fs.NewListDirStream(entries), 0
+}
+
+type FSMyDecksDir struct {
+	fs.Inode
+	s  *SQLiteStorage
+	da *DoKAPI
+
+	decks map[string]string
+}
+
+func NewFSMyDecksDir(ctx context.Context, s *SQLiteStorage, da *DoKAPI) (
+	*FSMyDecksDir, error) {
+	mdd := &FSMyDecksDir{
+		s:     s,
+		da:    da,
+		decks: make(map[string]string),
+	}
+	names, err := mdd.s.GetMyDeckNames(ctx)
+	if err != nil {
+		return nil, fs.ToErrno(err)
+	}
+	for id, name := range names {
+		mdd.decks[name] = id
+	}
+	return mdd, nil
+}
+
+var _ fs.InodeEmbedder = (*FSMyDecksDir)(nil)
+var _ fs.NodeLookuper = (*FSMyDecksDir)(nil)
+var _ fs.NodeReaddirer = (*FSMyDecksDir)(nil)
+
+func (mdd *FSMyDecksDir) Lookup(
+	ctx context.Context, name string, out *fuse.EntryOut) (
+	*fs.Inode, syscall.Errno) {
+	n := mdd.GetChild(name)
+	if n != nil {
+		return n, 0
+	}
+
+	id, ok := mdd.decks[name]
+	if !ok {
+		return nil, syscall.ENOENT
+	}
+
+	n = mdd.NewInode(ctx, &FSDeck{
+		s:  mdd.s,
+		da: mdd.da,
+		id: id,
+	}, fs.StableAttr{
+		Mode: syscall.S_IFDIR,
+	})
+
+	ok = mdd.AddChild(name, n, false)
+	if !ok {
+		return nil, syscall.EIO
+	}
+
+	return n, 0
+}
+
+func (mdd *FSMyDecksDir) Readdir(ctx context.Context) (
+	fs.DirStream, syscall.Errno) {
+	entries := make([]fuse.DirEntry, 0, len(mdd.decks))
+	for name := range mdd.decks {
+		entries = append(entries, fuse.DirEntry{
+			Mode: syscall.S_IFDIR,
+			Name: name,
+		})
+	}
+
+	return fs.NewListDirStream(entries), 0
+}
+
+// FSRoot is the root of the file system.
+type FSRoot struct {
+	fs.Inode
+	s  *SQLiteStorage
+	da *DoKAPI
+	im *ImageManager
+}
+
+func NewFSRoot(s *SQLiteStorage, da *DoKAPI, im *ImageManager) *FSRoot {
+	return &FSRoot{
+		s:  s,
+		da: da,
+		im: im,
+	}
+}
+
+var _ fs.InodeEmbedder = (*FSRoot)(nil)
+var _ fs.NodeOnAdder = (*FSRoot)(nil)
+
+func (r *FSRoot) getCardsDir(ctx context.Context) (*fs.Inode, error) {
+	cd, err := NewFSCardsDir(ctx, r.s, r.im)
+	if err != nil {
+		return nil, err
+	}
+	cdNode := r.NewPersistentInode(ctx, cd, fs.StableAttr{
+		Mode: syscall.S_IFDIR,
+	})
+	return cdNode, nil
+}
+
+func (r *FSRoot) getMyDecksDir(ctx context.Context) (*fs.Inode, error) {
+	mdd, err := NewFSMyDecksDir(ctx, r.s, r.da)
+	if err != nil {
+		return nil, err
+	}
+	mddNode := r.NewPersistentInode(ctx, mdd, fs.StableAttr{
+		Mode: syscall.S_IFDIR,
+	})
+	return mddNode, nil
+}
+
+func (r *FSRoot) OnAdd(ctx context.Context) {
+	cdNode, err := r.getCardsDir(ctx)
+	if err != nil {
+		panic("Couldn't make cards dir")
+	}
+	ok := r.AddChild(cardsDir, cdNode, false)
+	if !ok {
+		panic("Couldn't add cards dir")
+	}
+
+	mddNode, err := r.getMyDecksDir(ctx)
+	if err != nil {
+		panic("Couldn't make my-decks dir")
+	}
+	ok = r.AddChild(myDecksDir, mddNode, false)
+	if !ok {
+		panic("Couldn't add my-decks dir")
+	}
 }
