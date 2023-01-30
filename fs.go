@@ -287,6 +287,7 @@ type FSDeck struct {
 	fs.Inode
 	s  *SQLiteStorage
 	da *DoKAPI
+	im *ImageManager
 	id string
 }
 
@@ -341,6 +342,16 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		n = d.NewInode(ctx, &fs.MemRegularFile{
 			Data: deckJSON,
 		}, fs.StableAttr{})
+	case deckImageFilename:
+		deckImage, err := d.im.GetDeckImage(ctx, d.id)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+
+		out.Size = uint64(len(deckImage))
+		n = d.NewInode(ctx, &fs.MemRegularFile{
+			Data: deckImage,
+		}, fs.StableAttr{})
 	case deckCardsDir:
 		deck, err := d.getDeck(ctx)
 		if err != nil {
@@ -369,6 +380,9 @@ func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 			Name: deckJSONFilename,
 		},
 		{
+			Name: deckImageFilename,
+		},
+		{
 			Name: deckCardsDir,
 			Mode: syscall.S_IFDIR,
 		},
@@ -380,15 +394,18 @@ type FSMyDecksDir struct {
 	fs.Inode
 	s  *SQLiteStorage
 	da *DoKAPI
+	im *ImageManager
 
 	decks map[string]string
 }
 
-func NewFSMyDecksDir(ctx context.Context, s *SQLiteStorage, da *DoKAPI) (
+func NewFSMyDecksDir(
+	ctx context.Context, s *SQLiteStorage, da *DoKAPI, im *ImageManager) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:     s,
 		da:    da,
+		im:    im,
 		decks: make(map[string]string),
 	}
 	names, err := mdd.s.GetMyDeckNames(ctx)
@@ -422,6 +439,7 @@ func (mdd *FSMyDecksDir) Lookup(
 		s:  mdd.s,
 		da: mdd.da,
 		id: id,
+		im: mdd.im,
 	}, fs.StableAttr{
 		Mode: syscall.S_IFDIR,
 	})
@@ -478,7 +496,7 @@ func (r *FSRoot) getCardsDir(ctx context.Context) (*fs.Inode, error) {
 }
 
 func (r *FSRoot) getMyDecksDir(ctx context.Context) (*fs.Inode, error) {
-	mdd, err := NewFSMyDecksDir(ctx, r.s, r.da)
+	mdd, err := NewFSMyDecksDir(ctx, r.s, r.da, r.im)
 	if err != nil {
 		return nil, err
 	}

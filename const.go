@@ -7,6 +7,7 @@ const (
 	cardImagePrefix  = "image."
 	cardJSONFilename = "card.json"
 
-	deckJSONFilename = "deck.json"
-	deckCardsDir     = "cards"
+	deckJSONFilename  = "deck.json"
+	deckCardsDir      = "cards"
+	deckImageFilename = "deck.jpg"
 )
