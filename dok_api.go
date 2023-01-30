@@ -12,7 +12,8 @@ import (
 
 const (
 	apiKeyHeader   = "Api-Key"
-	dokCallsPerSec = 1
+	dokCallsPerSec = 0.41 // 25 calls per minute for lowest patreon level
+	dokBurst       = 1
 )
 
 // DoKAPI enables API calls to the decksofkeyforge server.
@@ -27,7 +28,7 @@ func NewDoKAPI(addr, apiKey string) *DoKAPI {
 	return &DoKAPI{
 		baseURL: addr + "/public-api/",
 		apiKey:  apiKey,
-		limiter: rate.NewLimiter(dokCallsPerSec, 5),
+		limiter: rate.NewLimiter(dokCallsPerSec, dokBurst),
 	}
 }
 
