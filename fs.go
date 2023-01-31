@@ -10,6 +10,7 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
+	"github.com/strib/forgefs/filter"
 )
 
 const (
@@ -201,8 +202,10 @@ func (dh *FSDeckHouseDir) Lookup(
 		return nil, syscall.ENOENT
 	}
 
+	path := dh.Path(nil)
+	backtrack := strings.Repeat("../", strings.Count(path, "/")+1)
 	n = dh.NewInode(ctx, &fs.MemSymlink{
-		Data: []byte("../../../../cards/" + house.Cards[i-1].CardTitle),
+		Data: []byte(backtrack + "cards/" + house.Cards[i-1].CardTitle),
 	}, fs.StableAttr{
 		Mode: syscall.S_IFLNK,
 	})
@@ -396,7 +399,8 @@ type FSMyDecksDir struct {
 	da *DoKAPI
 	im *ImageManager
 
-	decks map[string]string
+	decks      map[string]string
+	filterRoot *filter.Node
 }
 
 func NewFSMyDecksDir(
@@ -409,6 +413,27 @@ func NewFSMyDecksDir(
 		decks: make(map[string]string),
 	}
 	names, err := mdd.s.GetMyDeckNames(ctx)
+	if err != nil {
+		return nil, fs.ToErrno(err)
+	}
+	for id, name := range names {
+		mdd.decks[name] = id
+	}
+	return mdd, nil
+}
+
+func NewFSMyDecksDirWithFilter(
+	ctx context.Context, s *SQLiteStorage, da *DoKAPI, im *ImageManager,
+	filterRoot *filter.Node) (
+	*FSMyDecksDir, error) {
+	mdd := &FSMyDecksDir{
+		s:          s,
+		da:         da,
+		im:         im,
+		decks:      make(map[string]string),
+		filterRoot: filterRoot,
+	}
+	names, err := mdd.s.GetMyDeckNamesWithFilter(ctx, filterRoot)
 	if err != nil {
 		return nil, fs.ToErrno(err)
 	}
@@ -432,17 +457,39 @@ func (mdd *FSMyDecksDir) Lookup(
 
 	id, ok := mdd.decks[name]
 	if !ok {
-		return nil, syscall.ENOENT
-	}
+		// See if it's a filter.
+		filterRoot, err := filter.Parse(name)
+		if err != nil {
+			return nil, syscall.ENOENT
+		}
 
-	n = mdd.NewInode(ctx, &FSDeck{
-		s:  mdd.s,
-		da: mdd.da,
-		id: id,
-		im: mdd.im,
-	}, fs.StableAttr{
-		Mode: syscall.S_IFDIR,
-	})
+		if mdd.filterRoot != nil {
+			// AND this filter to this existing one.
+			filterRoot = &filter.Node{
+				Op:    filter.And{},
+				Left:  filterRoot,
+				Right: mdd.filterRoot,
+			}
+		}
+
+		newMDD, err := NewFSMyDecksDirWithFilter(
+			ctx, mdd.s, mdd.da, mdd.im, filterRoot)
+		if err != nil {
+			return nil, fs.ToErrno(err)
+		}
+		n = mdd.NewInode(ctx, newMDD, fs.StableAttr{
+			Mode: syscall.S_IFDIR,
+		})
+	} else {
+		n = mdd.NewInode(ctx, &FSDeck{
+			s:  mdd.s,
+			da: mdd.da,
+			id: id,
+			im: mdd.im,
+		}, fs.StableAttr{
+			Mode: syscall.S_IFDIR,
+		})
+	}
 
 	ok = mdd.AddChild(name, n, false)
 	if !ok {

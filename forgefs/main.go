@@ -82,10 +82,11 @@ func doMain() error {
 		return err
 	}
 
+	fmt.Printf("Mounting at %s\n", *mountpoint)
 	root := forgefs.NewFSRoot(s, da, im)
 	server, err := fs.Mount(*mountpoint, root, &fs.Options{
 		MountOptions: fuse.MountOptions{
-			Debug: true,
+			//Debug: true,
 		},
 	})
 	if err != nil {
