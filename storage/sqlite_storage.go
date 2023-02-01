@@ -108,7 +108,8 @@ const sqlCardStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?);
 `
 
-func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []forgefs.Card) error {
+func (s *SQLiteStorage) StoreCards(
+	ctx context.Context, cards []forgefs.Card) error {
 	for _, card := range cards {
 		j, err := json.Marshal(card)
 		if err != nil {
@@ -222,7 +223,8 @@ const sqlDeckStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
-func (s *SQLiteStorage) StoreDecks(ctx context.Context, decks []forgefs.Deck) error {
+func (s *SQLiteStorage) StoreDecks(
+	ctx context.Context, decks []forgefs.Deck) error {
 	for _, deck := range decks {
 		j, err := json.Marshal(deck)
 		if err != nil {

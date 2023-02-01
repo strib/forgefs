@@ -164,7 +164,8 @@ type Deck struct {
 
 type DataFetcher interface {
 	GetCards(ctx context.Context) ([]Card, error)
-	GetDecks(ctx context.Context) ([]Deck, error)
+	GetMyDecks(ctx context.Context) (decks []Deck, err error)
+	GetDeck(ctx context.Context, id string) (deck Deck, err error)
 }
 
 type Storage interface {

@@ -14,6 +14,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs"
+	"github.com/strib/forgefs/net"
 	"github.com/strib/forgefs/storage"
 )
 
@@ -101,7 +102,7 @@ func doMain() error {
 
 	fmt.Printf("Found %d cards\n", count)
 
-	da := forgefs.NewDoKAPI(config.DoKAddr, config.DoKAPIKey)
+	da := net.NewDoKAPI(config.DoKAddr, config.DoKAPIKey)
 	if count == 0 {
 		cards, err := da.GetCards(ctx)
 		if err != nil {
