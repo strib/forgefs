@@ -67,7 +67,7 @@ func NewImageManager(cacheDir string) (*ImageManager, error) {
 	}
 	return &ImageManager{
 		cacheDir: cacheDir,
-		limiter:  rate.NewLimiter(dokCallsPerSec, dokBurst),
+		limiter:  rate.NewLimiter(skyjCallsPerSec, skyjBurst),
 	}, nil
 }
 

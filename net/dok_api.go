@@ -1,4 +1,4 @@
-package forgefs
+package net
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/strib/forgefs"
 	"golang.org/x/time/rate"
 )
 
@@ -23,6 +24,8 @@ type DoKAPI struct {
 	limiter *rate.Limiter
 }
 
+var _ forgefs.DataFetcher = (*DoKAPI)(nil)
+
 // NewDoKAPI returns a new instance using the given address and API key.
 func NewDoKAPI(addr, apiKey string) *DoKAPI {
 	return &DoKAPI{
@@ -36,7 +39,8 @@ func (da *DoKAPI) wait(ctx context.Context) error {
 	return da.limiter.Wait(ctx)
 }
 
-func (da *DoKAPI) GetCards(ctx context.Context) (cards []Card, err error) {
+func (da *DoKAPI) GetCards(ctx context.Context) (
+	cards []forgefs.Card, err error) {
 	err = da.wait(ctx)
 	if err != nil {
 		return nil, err
@@ -73,7 +77,8 @@ func (da *DoKAPI) GetCards(ctx context.Context) (cards []Card, err error) {
 	return cards, nil
 }
 
-func (da *DoKAPI) GetMyDecks(ctx context.Context) (decks []Deck, err error) {
+func (da *DoKAPI) GetMyDecks(ctx context.Context) (
+	decks []forgefs.Deck, err error) {
 	err = da.wait(ctx)
 	if err != nil {
 		return nil, err
@@ -111,22 +116,22 @@ func (da *DoKAPI) GetMyDecks(ctx context.Context) (decks []Deck, err error) {
 }
 
 func (da *DoKAPI) GetDeck(ctx context.Context, id string) (
-	deck Deck, err error) {
+	deck forgefs.Deck, err error) {
 	err = da.wait(ctx)
 	if err != nil {
-		return Deck{}, err
+		return forgefs.Deck{}, err
 	}
 
 	req, err := http.NewRequestWithContext(
 		ctx, "GET", da.baseURL+"v3/decks/"+id, nil)
 	if err != nil {
-		return Deck{}, err
+		return forgefs.Deck{}, err
 	}
 
 	req.Header.Add(apiKeyHeader, da.apiKey)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Deck{}, err
+		return forgefs.Deck{}, err
 	}
 	defer func() {
 		closeErr := resp.Body.Close()
@@ -135,15 +140,15 @@ func (da *DoKAPI) GetDeck(ctx context.Context, id string) (
 		}
 	}()
 	if resp.StatusCode != 200 {
-		return Deck{}, fmt.Errorf("Error: %s", resp.Status)
+		return forgefs.Deck{}, fmt.Errorf("Error: %s", resp.Status)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Deck{}, err
+		return forgefs.Deck{}, err
 	}
 	err = json.Unmarshal(body, &deck)
 	if err != nil {
-		return Deck{}, err
+		return forgefs.Deck{}, err
 	}
 	return deck, nil
 }

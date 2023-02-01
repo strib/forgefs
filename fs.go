@@ -289,7 +289,7 @@ func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 type FSDeck struct {
 	fs.Inode
 	s  Storage
-	da *DoKAPI
+	da DataFetcher
 	im *ImageManager
 	id string
 }
@@ -396,7 +396,7 @@ func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 type FSMyDecksDir struct {
 	fs.Inode
 	s  Storage
-	da *DoKAPI
+	da DataFetcher
 	im *ImageManager
 
 	decks      map[string]string
@@ -404,7 +404,7 @@ type FSMyDecksDir struct {
 }
 
 func NewFSMyDecksDir(
-	ctx context.Context, s Storage, da *DoKAPI, im *ImageManager) (
+	ctx context.Context, s Storage, da DataFetcher, im *ImageManager) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:     s,
@@ -423,7 +423,7 @@ func NewFSMyDecksDir(
 }
 
 func NewFSMyDecksDirWithFilter(
-	ctx context.Context, s Storage, da *DoKAPI, im *ImageManager,
+	ctx context.Context, s Storage, da DataFetcher, im *ImageManager,
 	filterRoot *filter.Node) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
@@ -516,11 +516,11 @@ func (mdd *FSMyDecksDir) Readdir(ctx context.Context) (
 type FSRoot struct {
 	fs.Inode
 	s  Storage
-	da *DoKAPI
+	da DataFetcher
 	im *ImageManager
 }
 
-func NewFSRoot(s Storage, da *DoKAPI, im *ImageManager) *FSRoot {
+func NewFSRoot(s Storage, da DataFetcher, im *ImageManager) *FSRoot {
 	return &FSRoot{
 		s:  s,
 		da: da,
