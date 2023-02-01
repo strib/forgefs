@@ -1,4 +1,4 @@
-package forgefs
+package storage
 
 import (
 	"context"
@@ -9,12 +9,15 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/strib/forgefs"
 	"github.com/strib/forgefs/filter"
 )
 
 type SQLiteStorage struct {
 	db *sql.DB
 }
+
+var _ forgefs.Storage = (*SQLiteStorage)(nil)
 
 func NewSQLiteStorage(
 	ctx context.Context, file string) (*SQLiteStorage, error) {
@@ -105,7 +108,7 @@ const sqlCardStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?);
 `
 
-func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []Card) error {
+func (s *SQLiteStorage) StoreCards(ctx context.Context, cards []forgefs.Card) error {
 	for _, card := range cards {
 		j, err := json.Marshal(card)
 		if err != nil {
@@ -185,14 +188,14 @@ const sqlCardJSON string = `
 `
 
 func (s *SQLiteStorage) GetCard(ctx context.Context, id string) (
-	card *Card, err error) {
+	card *forgefs.Card, err error) {
 	row := s.db.QueryRowContext(ctx, sqlCardJSON, id)
 	var cardJSON string
 	err = row.Scan(&cardJSON)
 	if err != nil {
 		return nil, err
 	}
-	var c Card
+	var c forgefs.Card
 	err = json.Unmarshal([]byte(cardJSON), &c)
 	if err != nil {
 		return nil, err
@@ -219,7 +222,7 @@ const sqlDeckStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
-func (s *SQLiteStorage) StoreDecks(ctx context.Context, decks []Deck) error {
+func (s *SQLiteStorage) StoreDecks(ctx context.Context, decks []forgefs.Deck) error {
 	for _, deck := range decks {
 		j, err := json.Marshal(deck)
 		if err != nil {
@@ -465,14 +468,14 @@ const sqlDeckJSON string = `
 `
 
 func (s *SQLiteStorage) GetDeck(ctx context.Context, id string) (
-	deck *Deck, err error) {
+	deck *forgefs.Deck, err error) {
 	row := s.db.QueryRowContext(ctx, sqlDeckJSON, id)
 	var deckJSON string
 	err = row.Scan(&deckJSON)
 	if err != nil {
 		return nil, err
 	}
-	var d Deck
+	var d forgefs.Deck
 	err = json.Unmarshal([]byte(deckJSON), &d)
 	if err != nil {
 		return nil, err
