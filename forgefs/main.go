@@ -14,6 +14,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs"
+	"github.com/strib/forgefs/storage"
 )
 
 const (
@@ -87,7 +88,7 @@ func doMain() error {
 
 	ctx := context.Background()
 
-	s, err := forgefs.NewSQLiteStorage(ctx, config.DBFile)
+	s, err := storage.NewSQLiteStorage(ctx, config.DBFile)
 	if err != nil {
 		return err
 	}

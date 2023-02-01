@@ -19,7 +19,7 @@ const (
 
 type FSCard struct {
 	fs.Inode
-	s  *SQLiteStorage
+	s  Storage
 	id string
 	im *ImageManager
 }
@@ -100,14 +100,14 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 type FSCardsDir struct {
 	fs.Inode
-	s  *SQLiteStorage
+	s  Storage
 	im *ImageManager
 
 	cards map[string]string
 }
 
 func NewFSCardsDir(
-	ctx context.Context, s *SQLiteStorage, im *ImageManager) (
+	ctx context.Context, s Storage, im *ImageManager) (
 	*FSCardsDir, error) {
 	cd := &FSCardsDir{
 		s:     s,
@@ -288,7 +288,7 @@ func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 
 type FSDeck struct {
 	fs.Inode
-	s  *SQLiteStorage
+	s  Storage
 	da *DoKAPI
 	im *ImageManager
 	id string
@@ -395,7 +395,7 @@ func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 type FSMyDecksDir struct {
 	fs.Inode
-	s  *SQLiteStorage
+	s  Storage
 	da *DoKAPI
 	im *ImageManager
 
@@ -404,7 +404,7 @@ type FSMyDecksDir struct {
 }
 
 func NewFSMyDecksDir(
-	ctx context.Context, s *SQLiteStorage, da *DoKAPI, im *ImageManager) (
+	ctx context.Context, s Storage, da *DoKAPI, im *ImageManager) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:     s,
@@ -423,7 +423,7 @@ func NewFSMyDecksDir(
 }
 
 func NewFSMyDecksDirWithFilter(
-	ctx context.Context, s *SQLiteStorage, da *DoKAPI, im *ImageManager,
+	ctx context.Context, s Storage, da *DoKAPI, im *ImageManager,
 	filterRoot *filter.Node) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
@@ -515,12 +515,12 @@ func (mdd *FSMyDecksDir) Readdir(ctx context.Context) (
 // FSRoot is the root of the file system.
 type FSRoot struct {
 	fs.Inode
-	s  *SQLiteStorage
+	s  Storage
 	da *DoKAPI
 	im *ImageManager
 }
 
-func NewFSRoot(s *SQLiteStorage, da *DoKAPI, im *ImageManager) *FSRoot {
+func NewFSRoot(s Storage, da *DoKAPI, im *ImageManager) *FSRoot {
 	return &FSRoot{
 		s:  s,
 		da: da,
