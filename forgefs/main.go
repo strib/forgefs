@@ -2,39 +2,92 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs"
 )
 
-var apiKey = flag.String("api-key", "", "Your decksofkeyforge API key")
-var addr = flag.String(
-	"addr", "https://decksofkeyforge.com", "The decksofkeyforge host address")
-var dbFile = flag.String("db-file", ".forgefs.sqlite", "Local database file")
-var mountpoint = flag.String("mountpoint", "ffs", "Mountpoint for forgefs")
-var imageCacheDir = flag.String(
-	"image-cache-dir", ".forgefs_images", "image cache directory")
+const (
+	defaultDoKAddr       = "https://decksofkeyforge.com"
+	defaultDBFile        = ".forgefs.sqlite"
+	defaultMountpoint    = "ffs"
+	defaultImageCacheDir = ".forgefs_images"
+)
+
+var defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".forgefs_config.json")
 
 func doMain() error {
+	// Start with built-in defaults.
+	config := forgefs.Config{
+		Debug:         false,
+		DoKAddr:       defaultDoKAddr,
+		DBFile:        defaultDBFile,
+		Mountpoint:    defaultMountpoint,
+		ImageCacheDir: defaultImageCacheDir,
+	}
+
+	// Load default config file, if it exists, to provide default
+	// config values.
+	configData, err := ioutil.ReadFile(defaultConfigFile)
+	switch err {
+	case nil:
+		err = json.Unmarshal(configData, &config)
+		if err != nil {
+			return err
+		}
+	default:
+		if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	// Get flag values.  If present, these override the config file.
+	flag.StringVar(
+		&config.DoKAPIKey, "api-key", config.DoKAddr,
+		"Your decksofkeyforge API key")
+	flag.StringVar(
+		&config.DoKAddr, "addr", config.DoKAddr,
+		"The decksofkeyforge host address")
+	flag.StringVar(
+		&config.DBFile, "db-file", config.DBFile, "Local database file")
+	flag.StringVar(
+		&config.Mountpoint, "mountpoint", config.Mountpoint,
+		"Mountpoint for forgefs")
+	flag.StringVar(
+		&config.ImageCacheDir, "image-cache-dir", config.ImageCacheDir,
+		"image cache directory")
+	var configFile = flag.String(
+		"config-file", "",
+		fmt.Sprintf("Custom config file location (default %s)",
+			defaultConfigFile))
 	flag.Parse()
-	if apiKey == nil || *apiKey == "" {
+
+	if configFile != nil && *configFile != "" {
+		configData, err := ioutil.ReadFile(defaultConfigFile)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(configData, &config)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DoKAPIKey == "" {
 		return errors.New("No API key given")
-	}
-	if dbFile == nil || *dbFile == "" {
-		return errors.New("No DB file given")
-	}
-	if mountpoint == nil || *mountpoint == "" {
-		return errors.New("No DB file given")
 	}
 
 	ctx := context.Background()
 
-	s, err := forgefs.NewSQLiteStorage(ctx, *dbFile)
+	s, err := forgefs.NewSQLiteStorage(ctx, config.DBFile)
 	if err != nil {
 		return err
 	}
@@ -47,7 +100,7 @@ func doMain() error {
 
 	fmt.Printf("Found %d cards\n", count)
 
-	da := forgefs.NewDoKAPI(*addr, *apiKey)
+	da := forgefs.NewDoKAPI(config.DoKAddr, config.DoKAPIKey)
 	if count == 0 {
 		cards, err := da.GetCards(ctx)
 		if err != nil {
@@ -77,14 +130,14 @@ func doMain() error {
 		}
 	}
 
-	im, err := forgefs.NewImageManager(*imageCacheDir)
+	im, err := forgefs.NewImageManager(config.ImageCacheDir)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Mounting at %s\n", *mountpoint)
+	fmt.Printf("Mounting at %s\n", config.Mountpoint)
 	root := forgefs.NewFSRoot(s, da, im)
-	server, err := fs.Mount(*mountpoint, root, &fs.Options{
+	server, err := fs.Mount(config.Mountpoint, root, &fs.Options{
 		MountOptions: fuse.MountOptions{
 			//Debug: true,
 		},
