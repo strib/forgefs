@@ -11,10 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
-	fusefs "github.com/hanwen/go-fuse/v2/fs"
+	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/strib/forgefs"
-	"github.com/strib/forgefs/fs"
+	"github.com/strib/forgefs/fsutil"
+	"github.com/strib/forgefs/fusefs"
 	"github.com/strib/forgefs/net"
 	"github.com/strib/forgefs/storage"
 )
@@ -31,7 +31,7 @@ var defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".forgefs_config.json")
 
 func doMain() error {
 	// Start with built-in defaults.
-	config := forgefs.Config{
+	config := fusefs.Config{
 		Debug:         false,
 		DoKAddr:       defaultDoKAddr,
 		SkyJAddr:      defaultSkyJAddr,
@@ -144,11 +144,11 @@ func doMain() error {
 	}
 	cardFetcher := &net.CardFetcher{}
 	deckFetcher := net.NewSkyJAPI(config.SkyJAddr)
-	im := fs.NewImageManager(cardFetcher, deckFetcher, imageCache)
+	im := fsutil.NewImageManager(cardFetcher, deckFetcher, imageCache)
 
 	fmt.Printf("Mounting at %s\n", config.Mountpoint)
-	root := fs.NewFSRoot(s, da, im)
-	server, err := fusefs.Mount(config.Mountpoint, root, &fusefs.Options{
+	root := fusefs.NewFSRoot(s, da, im)
+	server, err := fs.Mount(config.Mountpoint, root, &fs.Options{
 		MountOptions: fuse.MountOptions{
 			Debug: config.Debug,
 		},

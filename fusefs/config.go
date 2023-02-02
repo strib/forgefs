@@ -1,4 +1,4 @@
-package forgefs
+package fusefs
 
 type Config struct {
 	Debug         bool   `json:"debug,omitempty"`

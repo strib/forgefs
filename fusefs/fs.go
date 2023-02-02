@@ -1,4 +1,4 @@
-package fs
+package fusefs
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs"
 	"github.com/strib/forgefs/filter"
+	"github.com/strib/forgefs/fsutil"
 )
 
 const (
@@ -22,7 +23,7 @@ type FSCard struct {
 	fs.Inode
 	s  forgefs.Storage
 	id string
-	im *ImageManager
+	im *fsutil.ImageManager
 }
 
 var _ fs.InodeEmbedder = (*FSCard)(nil)
@@ -37,7 +38,7 @@ func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	}
 
 	switch name {
-	case cardJSONFilename:
+	case fsutil.CardJSONFilename:
 		card, err := c.s.GetCard(ctx, c.id)
 		if err != nil {
 			return nil, fs.ToErrno(err)
@@ -57,7 +58,7 @@ func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		if err != nil {
 			return nil, fs.ToErrno(err)
 		}
-		if !strings.HasPrefix(name, cardImagePrefix) {
+		if !strings.HasPrefix(name, fsutil.CardImagePrefix) {
 			return nil, syscall.ENOENT
 		}
 		data, err := c.im.GetCardImage(ctx, c.id, imageURL)
@@ -90,10 +91,10 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 	entries := []fuse.DirEntry{
 		{
-			Name: cardJSONFilename,
+			Name: fsutil.CardJSONFilename,
 		},
 		{
-			Name: cardImagePrefix + suffix,
+			Name: fsutil.CardImagePrefix + suffix,
 		},
 	}
 	return fs.NewListDirStream(entries), 0
@@ -102,13 +103,13 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 type FSCardsDir struct {
 	fs.Inode
 	s  forgefs.Storage
-	im *ImageManager
+	im *fsutil.ImageManager
 
 	cards map[string]string
 }
 
 func NewFSCardsDir(
-	ctx context.Context, s forgefs.Storage, im *ImageManager) (
+	ctx context.Context, s forgefs.Storage, im *fsutil.ImageManager) (
 	*FSCardsDir, error) {
 	cd := &FSCardsDir{
 		s:     s,
@@ -292,7 +293,7 @@ type FSDeck struct {
 	fs.Inode
 	s  forgefs.Storage
 	da forgefs.DataFetcher
-	im *ImageManager
+	im *fsutil.ImageManager
 	id string
 }
 
@@ -331,7 +332,7 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	}
 
 	switch name {
-	case deckJSONFilename:
+	case fsutil.DeckJSONFilename:
 		deck, err := d.getDeck(ctx)
 		if err != nil {
 			return nil, fs.ToErrno(err)
@@ -347,7 +348,7 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		n = d.NewInode(ctx, &fs.MemRegularFile{
 			Data: deckJSON,
 		}, fs.StableAttr{})
-	case deckImageFilename:
+	case fsutil.DeckImageFilename:
 		deckImage, err := d.im.GetDeckImage(ctx, d.id)
 		if err != nil {
 			return nil, fs.ToErrno(err)
@@ -357,7 +358,7 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 		n = d.NewInode(ctx, &fs.MemRegularFile{
 			Data: deckImage,
 		}, fs.StableAttr{})
-	case deckCardsDir:
+	case fsutil.DeckCardsDir:
 		deck, err := d.getDeck(ctx)
 		if err != nil {
 			return nil, fs.ToErrno(err)
@@ -382,13 +383,13 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	entries := []fuse.DirEntry{
 		{
-			Name: deckJSONFilename,
+			Name: fsutil.DeckJSONFilename,
 		},
 		{
-			Name: deckImageFilename,
+			Name: fsutil.DeckImageFilename,
 		},
 		{
-			Name: deckCardsDir,
+			Name: fsutil.DeckCardsDir,
 			Mode: syscall.S_IFDIR,
 		},
 	}
@@ -399,7 +400,7 @@ type FSMyDecksDir struct {
 	fs.Inode
 	s  forgefs.Storage
 	da forgefs.DataFetcher
-	im *ImageManager
+	im *fsutil.ImageManager
 
 	decks      map[string]string
 	filterRoot *filter.Node
@@ -407,7 +408,7 @@ type FSMyDecksDir struct {
 
 func NewFSMyDecksDir(
 	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
-	im *ImageManager) (*FSMyDecksDir, error) {
+	im *fsutil.ImageManager) (*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:     s,
 		da:    da,
@@ -426,7 +427,7 @@ func NewFSMyDecksDir(
 
 func NewFSMyDecksDirWithFilter(
 	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
-	im *ImageManager, filterRoot *filter.Node) (
+	im *fsutil.ImageManager, filterRoot *filter.Node) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:          s,
@@ -519,11 +520,12 @@ type FSRoot struct {
 	fs.Inode
 	s  forgefs.Storage
 	da forgefs.DataFetcher
-	im *ImageManager
+	im *fsutil.ImageManager
 }
 
 func NewFSRoot(
-	s forgefs.Storage, da forgefs.DataFetcher, im *ImageManager) *FSRoot {
+	s forgefs.Storage, da forgefs.DataFetcher,
+	im *fsutil.ImageManager) *FSRoot {
 	return &FSRoot{
 		s:  s,
 		da: da,
@@ -561,7 +563,7 @@ func (r *FSRoot) OnAdd(ctx context.Context) {
 	if err != nil {
 		panic("Couldn't make cards dir")
 	}
-	ok := r.AddChild(cardsDir, cdNode, false)
+	ok := r.AddChild(fsutil.CardsDir, cdNode, false)
 	if !ok {
 		panic("Couldn't add cards dir")
 	}
@@ -570,7 +572,7 @@ func (r *FSRoot) OnAdd(ctx context.Context) {
 	if err != nil {
 		panic("Couldn't make my-decks dir")
 	}
-	ok = r.AddChild(myDecksDir, mddNode, false)
+	ok = r.AddChild(fsutil.MyDecksDir, mddNode, false)
 	if !ok {
 		panic("Couldn't add my-decks dir")
 	}
