@@ -1,4 +1,4 @@
-package forgefs
+package fs
 
 const (
 	cardsDir   = "cards"

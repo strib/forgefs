@@ -11,15 +11,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hanwen/go-fuse/v2/fs"
+	fusefs "github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs"
+	"github.com/strib/forgefs/fs"
 	"github.com/strib/forgefs/net"
 	"github.com/strib/forgefs/storage"
 )
 
 const (
 	defaultDoKAddr       = "https://decksofkeyforge.com"
+	defaultSkyJAddr      = "https://tts.skyj.io"
 	defaultDBFile        = ".forgefs.sqlite"
 	defaultMountpoint    = "ffs"
 	defaultImageCacheDir = ".forgefs_images"
@@ -32,6 +34,7 @@ func doMain() error {
 	config := forgefs.Config{
 		Debug:         false,
 		DoKAddr:       defaultDoKAddr,
+		SkyJAddr:      defaultSkyJAddr,
 		DBFile:        defaultDBFile,
 		Mountpoint:    defaultMountpoint,
 		ImageCacheDir: defaultImageCacheDir,
@@ -57,8 +60,11 @@ func doMain() error {
 		&config.DoKAPIKey, "api-key", config.DoKAddr,
 		"Your decksofkeyforge API key")
 	flag.StringVar(
-		&config.DoKAddr, "addr", config.DoKAddr,
-		"The decksofkeyforge host address")
+		&config.DoKAddr, "dok-addr", config.DoKAddr,
+		"The decksofkeyforge API host address")
+	flag.StringVar(
+		&config.SkyJAddr, "skyj-addr", config.SkyJAddr,
+		"The skyjedi API host address")
 	flag.StringVar(
 		&config.DBFile, "db-file", config.DBFile, "Local database file")
 	flag.StringVar(
@@ -132,16 +138,19 @@ func doMain() error {
 		}
 	}
 
-	im, err := forgefs.NewImageManager(config.ImageCacheDir)
+	imageCache, err := storage.NewDirImageCache(config.ImageCacheDir)
 	if err != nil {
 		return err
 	}
+	cardFetcher := &net.CardFetcher{}
+	deckFetcher := net.NewSkyJAPI(config.SkyJAddr)
+	im := fs.NewImageManager(cardFetcher, deckFetcher, imageCache)
 
 	fmt.Printf("Mounting at %s\n", config.Mountpoint)
-	root := forgefs.NewFSRoot(s, da, im)
-	server, err := fs.Mount(config.Mountpoint, root, &fs.Options{
+	root := fs.NewFSRoot(s, da, im)
+	server, err := fusefs.Mount(config.Mountpoint, root, &fusefs.Options{
 		MountOptions: fuse.MountOptions{
-			//Debug: true,
+			Debug: config.Debug,
 		},
 	})
 	if err != nil {
