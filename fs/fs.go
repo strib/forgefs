@@ -1,4 +1,4 @@
-package forgefs
+package fs
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
+	"github.com/strib/forgefs"
 	"github.com/strib/forgefs/filter"
 )
 
@@ -19,7 +20,7 @@ const (
 
 type FSCard struct {
 	fs.Inode
-	s  Storage
+	s  forgefs.Storage
 	id string
 	im *ImageManager
 }
@@ -100,14 +101,14 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 type FSCardsDir struct {
 	fs.Inode
-	s  Storage
+	s  forgefs.Storage
 	im *ImageManager
 
 	cards map[string]string
 }
 
 func NewFSCardsDir(
-	ctx context.Context, s Storage, im *ImageManager) (
+	ctx context.Context, s forgefs.Storage, im *ImageManager) (
 	*FSCardsDir, error) {
 	cd := &FSCardsDir{
 		s:     s,
@@ -128,7 +129,8 @@ var _ fs.InodeEmbedder = (*FSCardsDir)(nil)
 var _ fs.NodeLookuper = (*FSCardsDir)(nil)
 var _ fs.NodeReaddirer = (*FSCardsDir)(nil)
 
-func (cd *FSCardsDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
+func (cd *FSCardsDir) Lookup(
+	ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
 	n := cd.GetChild(name)
 	if n != nil {
@@ -171,7 +173,7 @@ func (cd *FSCardsDir) Readdir(ctx context.Context) (
 type FSDeckHouseDir struct {
 	fs.Inode
 
-	d     *Deck
+	d     *forgefs.Deck
 	house string
 }
 
@@ -192,7 +194,7 @@ func (dh *FSDeckHouseDir) Lookup(
 		return nil, syscall.ENOENT
 	}
 
-	var house HouseInDeck
+	var house forgefs.HouseInDeck
 	for _, h := range dh.d.DeckInfo.Houses {
 		if h.House == dh.house {
 			house = h
@@ -233,7 +235,7 @@ func (mdd *FSDeckHouseDir) Readdir(ctx context.Context) (
 type FSDeckCardsDir struct {
 	fs.Inode
 
-	d *Deck
+	d *forgefs.Deck
 }
 
 var _ fs.InodeEmbedder = (*FSDeckCardsDir)(nil)
@@ -288,8 +290,8 @@ func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 
 type FSDeck struct {
 	fs.Inode
-	s  Storage
-	da DataFetcher
+	s  forgefs.Storage
+	da forgefs.DataFetcher
 	im *ImageManager
 	id string
 }
@@ -298,7 +300,7 @@ var _ fs.InodeEmbedder = (*FSDeck)(nil)
 var _ fs.NodeLookuper = (*FSDeck)(nil)
 var _ fs.NodeReaddirer = (*FSDeck)(nil)
 
-func (d *FSDeck) getDeck(ctx context.Context) (*Deck, error) {
+func (d *FSDeck) getDeck(ctx context.Context) (*forgefs.Deck, error) {
 	deck, err := d.s.GetDeck(ctx, d.id)
 	if err != nil {
 		return nil, fs.ToErrno(err)
@@ -312,7 +314,7 @@ func (d *FSDeck) getDeck(ctx context.Context) (*Deck, error) {
 			return nil, fs.ToErrno(err)
 		}
 		deck.DeckInfo.Houses = newDeck.DeckInfo.Houses
-		err = d.s.StoreDecks(ctx, []Deck{*deck})
+		err = d.s.StoreDecks(ctx, []forgefs.Deck{*deck})
 		if err != nil {
 			return nil, fs.ToErrno(err)
 		}
@@ -395,8 +397,8 @@ func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 
 type FSMyDecksDir struct {
 	fs.Inode
-	s  Storage
-	da DataFetcher
+	s  forgefs.Storage
+	da forgefs.DataFetcher
 	im *ImageManager
 
 	decks      map[string]string
@@ -404,8 +406,8 @@ type FSMyDecksDir struct {
 }
 
 func NewFSMyDecksDir(
-	ctx context.Context, s Storage, da DataFetcher, im *ImageManager) (
-	*FSMyDecksDir, error) {
+	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
+	im *ImageManager) (*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:     s,
 		da:    da,
@@ -423,8 +425,8 @@ func NewFSMyDecksDir(
 }
 
 func NewFSMyDecksDirWithFilter(
-	ctx context.Context, s Storage, da DataFetcher, im *ImageManager,
-	filterRoot *filter.Node) (
+	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
+	im *ImageManager, filterRoot *filter.Node) (
 	*FSMyDecksDir, error) {
 	mdd := &FSMyDecksDir{
 		s:          s,
@@ -515,12 +517,13 @@ func (mdd *FSMyDecksDir) Readdir(ctx context.Context) (
 // FSRoot is the root of the file system.
 type FSRoot struct {
 	fs.Inode
-	s  Storage
-	da DataFetcher
+	s  forgefs.Storage
+	da forgefs.DataFetcher
 	im *ImageManager
 }
 
-func NewFSRoot(s Storage, da DataFetcher, im *ImageManager) *FSRoot {
+func NewFSRoot(
+	s forgefs.Storage, da forgefs.DataFetcher, im *ImageManager) *FSRoot {
 	return &FSRoot{
 		s:  s,
 		da: da,
