@@ -191,7 +191,6 @@ func mockFilter(n *filter.Node, d forgefs.Deck) (bool, error) {
 	default:
 		return false, errors.New("Unrecognized boolean op")
 	}
-	return false, nil
 }
 
 func (ms *mockStorage) GetMyDeckNamesWithFilter(

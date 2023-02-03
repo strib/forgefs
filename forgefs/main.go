@@ -57,7 +57,7 @@ func doMain() error {
 
 	// Get flag values.  If present, these override the config file.
 	flag.StringVar(
-		&config.DoKAPIKey, "api-key", config.DoKAddr,
+		&config.DoKAPIKey, "api-key", config.DoKAPIKey,
 		"Your decksofkeyforge API key")
 	flag.StringVar(
 		&config.DoKAddr, "dok-addr", config.DoKAddr,

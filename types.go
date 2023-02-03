@@ -53,7 +53,7 @@ type ExtraCardInfo struct {
 	EnhancementDamage     int     `json:"enhancementDamage,omitempty"`
 	EnhancementDraw       int     `json:"enhancementDraw,omitempty"`
 	ExpectedAmber         float64 `json:"expectedAmber,omitempty"`
-	ExpectedAmberMax      float64 `json:"expectedAmber,omitempty"`
+	ExpectedAmberMax      float64 `json:"expectedAmberMax,omitempty"`
 	ID                    string  `json:"id,omitempty"`
 	Other                 float64 `json:"other,omitempty"`
 	OtherMax              float64 `json:"otherMax,omitempty"`
@@ -97,8 +97,8 @@ type Card struct {
 	Losses           int                      `json:"losses,omitempty"`
 	Maverick         bool                     `json:"maverick,omitempty"`
 	Power            int                      `json:"power,omitempty"`
-	PowerString      string                   `json:"power,omitempty"`
-	Rarity           string                   `json:rarity",omitempty"`
+	PowerString      string                   `json:"powerString,omitempty"`
+	Rarity           string                   `json:"rarity,omitempty"`
 	Traits           []string                 `json:"traits,omitempty"`
 	Wins             int                      `json:"wins,omitempty"`
 }
@@ -117,7 +117,7 @@ type HouseInDeck struct {
 }
 
 type DeckInfo struct {
-	ActionCount            int           `json:actionCount",omitempty"`
+	ActionCount            int           `json:"actionCount,omitempty"`
 	AercScore              int           `json:"aercScore,omitempty"`
 	AercVersion            int           `json:"aercVersion,omitempty"`
 	AmberControl           float64       `json:"amberControl,omitempty"`
@@ -125,7 +125,7 @@ type DeckInfo struct {
 	ArtifactControl        float64       `json:"artifactControl,omitempty"`
 	CreatureControl        float64       `json:"creatureControl,omitempty"`
 	CreatureCount          int           `json:"creatureCount,omitempty"`
-	CreatureProtection     float64       `json:creatureProtection",omitempty"`
+	CreatureProtection     float64       `json:"creatureProtection,omitempty"`
 	DateAdded              string        `json:"dateAdded,omitempty"`
 	Disruption             float64       `json:"disruption,omitempty"`
 	EffectivePower         int           `json:"effectivePower,omitempty"`
@@ -141,7 +141,7 @@ type DeckInfo struct {
 	PreviousMajorSasRating int           `json:"previousMajorSasRating,omitempty"`
 	PreviousSasRating      int           `json:"previosSasRating,omitempty"`
 	RawAmber               int           `json:"rawAmber,omitempty"`
-	SasPercentile          float64       `json:sasPercentile",omitempty"`
+	SasPercentile          float64       `json:"sasPercentile,omitempty"`
 	SasRating              int           `json:"sasRating,omitempty"`
 	SynergyRating          int           `json:"synergyRating,omitempty"`
 	TotalArmor             int           `json:"totalArmor,omitempty"`
