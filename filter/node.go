@@ -13,5 +13,6 @@ func (n *Node) String() string {
 		return n.Constraint.String()
 	}
 
-	return "(" + n.Left.String() + " " + n.Op.String() + " " + n.Right.String() + ")"
+	return "(" + n.Left.String() + " " + n.Op.String() + " " +
+		n.Right.String() + ")"
 }
