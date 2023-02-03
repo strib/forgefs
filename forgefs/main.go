@@ -29,7 +29,7 @@ const (
 
 var defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".forgefs_config.json")
 
-func doMain() error {
+func doMain() (err error) {
 	// Start with built-in defaults.
 	config := fusefs.Config{
 		Debug:         false,
@@ -99,7 +99,12 @@ func doMain() error {
 	if err != nil {
 		return err
 	}
-	defer s.Shutdown()
+	defer func() {
+		serr := s.Shutdown()
+		if err == nil {
+			err = serr
+		}
+	}()
 
 	count, err := s.GetCardsCount(ctx)
 	if err != nil {

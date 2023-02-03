@@ -1,0 +1,9 @@
+issues:
+  exclude:
+    - "structtag: struct field tag (.*) not compatible"
+
+linters:
+  enable:
+    - gofmt
+    - gocritic
+    - unconvert

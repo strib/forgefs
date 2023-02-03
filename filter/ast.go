@@ -127,9 +127,11 @@ func (c *Constraint) String() string {
 	if len(c.Value.Range) != 0 {
 		return fmt.Sprintf("[%s = %s:%s]",
 			c.Var, c.Value.MinString(), c.Value.MaxString())
-	} else if c.Value.Float != nil {
+	}
+	if c.Value.Float != nil {
 		return fmt.Sprintf("[%s = %f]", c.Var, *c.Value.Float)
-	} else if c.Value.Int != nil {
+	}
+	if c.Value.Int != nil {
 		return fmt.Sprintf("[%s = %d]", c.Var, *c.Value.Int)
 	}
 	return fmt.Sprintf("[%s = %s]", c.Var, *c.Value.String)

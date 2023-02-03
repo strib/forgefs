@@ -148,7 +148,8 @@ func mockFilter(n *filter.Node, d forgefs.Deck) (bool, error) {
 
 		if n.Constraint.Value.Int != nil {
 			return value == float64(*n.Constraint.Value.Int), nil
-		} else if len(n.Constraint.Value.Range) > 0 {
+		}
+		if len(n.Constraint.Value.Range) > 0 {
 			min := n.Constraint.Value.MinString()
 			if min != "" {
 				minFloat, err := strconv.ParseFloat(min, 64)
@@ -170,9 +171,8 @@ func mockFilter(n *filter.Node, d forgefs.Deck) (bool, error) {
 				}
 			}
 			return true, nil
-		} else {
-			return false, errors.New("Value not implemented")
 		}
+		return false, errors.New("Value not implemented")
 	}
 
 	left, err := mockFilter(n.Left, d)
