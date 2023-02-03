@@ -1,5 +1,6 @@
 package fusefs
 
+// Config represents the config file for a FUSE-based file system.
 type Config struct {
 	Debug         bool   `json:"debug,omitempty"`
 	DoKAPIKey     string `json:"dok_api_key,omitempty"`

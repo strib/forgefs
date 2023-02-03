@@ -9,12 +9,16 @@ import (
 	"github.com/strib/forgefs"
 )
 
+// DirImageCache stores image files for cards and decks into a single
+// on-disk directory, with each file named after the UUID of the
+// card/deck.
 type DirImageCache struct {
 	cacheDir string
 }
 
 var _ forgefs.ImageCache = (*DirImageCache)(nil)
 
+// NewDirImageCache creates a new instance of DirImageCache.
 func NewDirImageCache(cacheDir string) (*DirImageCache, error) {
 	err := os.MkdirAll(cacheDir, 0755)
 	if err != nil {
@@ -43,6 +47,7 @@ func (dic *DirImageCache) getImage(
 	return nil, false, err
 }
 
+// GetCardImage implements the forgefs.ImageCache interface.
 func (dic *DirImageCache) GetCardImage(
 	ctx context.Context, cardID, fileType string) ([]byte, bool, error) {
 	return dic.getImage(ctx, cardID, fileType)
@@ -64,16 +69,19 @@ func (dic *DirImageCache) storeImage(
 	return nil
 }
 
+// StoreCardImage implements the forgefs.ImageCache interface.
 func (dic *DirImageCache) StoreCardImage(
 	ctx context.Context, cardID, fileType string, data []byte) error {
 	return dic.storeImage(ctx, cardID, fileType, data)
 }
 
+// GetDeckImage implements the forgefs.ImageCache interface.
 func (dic *DirImageCache) GetDeckImage(
 	ctx context.Context, deckID, fileType string) ([]byte, bool, error) {
 	return dic.getImage(ctx, deckID, fileType)
 }
 
+// StoreDeckImage implements the forgefs.ImageCache interface.
 func (dic *DirImageCache) StoreDeckImage(
 	ctx context.Context, deckID, fileType string, data []byte) error {
 	return dic.storeImage(ctx, deckID, fileType, data)

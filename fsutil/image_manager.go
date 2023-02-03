@@ -7,12 +7,15 @@ import (
 	"github.com/strib/forgefs"
 )
 
+// ImageManager provides images to a file system, either from a local
+// cache or fetching them remotely.
 type ImageManager struct {
 	cardFetcher forgefs.CardImageFetcher
 	deckFetcher forgefs.DeckImageFetcher
 	cache       forgefs.ImageCache
 }
 
+// NewImageManager creates a new ImageManager instance.
 func NewImageManager(
 	cardFetcher forgefs.CardImageFetcher, deckFetcher forgefs.DeckImageFetcher,
 	cache forgefs.ImageCache) *ImageManager {
@@ -32,6 +35,7 @@ func getImageURLSuffix(imageURL string) string {
 	return suffix
 }
 
+// GetCardImage gets the image data for the given card.
 func (im *ImageManager) GetCardImage(
 	ctx context.Context, cardID, imageURL string) ([]byte, error) {
 	suffix := getImageURLSuffix(imageURL)
@@ -56,6 +60,7 @@ func (im *ImageManager) GetCardImage(
 	return data, nil
 }
 
+// GetDeckImage gets the image data for the given deck.
 func (im *ImageManager) GetDeckImage(
 	ctx context.Context, deckID string) ([]byte, error) {
 	suffix := im.deckFetcher.GetDeckImageSuffix()

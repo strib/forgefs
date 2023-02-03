@@ -17,7 +17,9 @@ const (
 	dokBurst       = 1
 )
 
-// DoKAPI enables API calls to the decksofkeyforge server.
+// DoKAPI enables API calls to the decksofkeyforge server.  Calls are
+// rate-limited to ensure compliance with the decksofkeyforge API
+// rules.
 type DoKAPI struct {
 	baseURL string
 	apiKey  string
@@ -39,6 +41,7 @@ func (da *DoKAPI) wait(ctx context.Context) error {
 	return da.limiter.Wait(ctx)
 }
 
+// GetCards implements the forgefs.DataFetcher interface.
 func (da *DoKAPI) GetCards(ctx context.Context) (
 	cards []forgefs.Card, err error) {
 	err = da.wait(ctx)
@@ -77,6 +80,7 @@ func (da *DoKAPI) GetCards(ctx context.Context) (
 	return cards, nil
 }
 
+// GetMyDecks implements the forgefs.DataFetcher interface.
 func (da *DoKAPI) GetMyDecks(ctx context.Context) (
 	decks []forgefs.Deck, err error) {
 	err = da.wait(ctx)
@@ -115,6 +119,7 @@ func (da *DoKAPI) GetMyDecks(ctx context.Context) (
 	return decks, nil
 }
 
+// GetDeck implements the forgefs.DataFetcher interface.
 func (da *DoKAPI) GetDeck(ctx context.Context, id string) (
 	deck forgefs.Deck, err error) {
 	err = da.wait(ctx)

@@ -9,10 +9,13 @@ import (
 	"github.com/strib/forgefs"
 )
 
+// CardFetcher is a simple type for fetching images directly from a
+// URL.
 type CardFetcher struct{}
 
 var _ forgefs.CardImageFetcher = (*CardFetcher)(nil)
 
+// GetCardImage implements the forgefs.CardImageFetcher interface.
 func (cf *CardFetcher) GetCardImage(ctx context.Context, imageURL string) (
 	data []byte, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", imageURL, nil)

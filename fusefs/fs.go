@@ -19,6 +19,7 @@ const (
 	numCardsInHouse = 12
 )
 
+// FSCard is a fuse inode representing a card's directory.
 type FSCard struct {
 	fs.Inode
 	s  forgefs.Storage
@@ -30,6 +31,7 @@ var _ fs.InodeEmbedder = (*FSCard)(nil)
 var _ fs.NodeLookuper = (*FSCard)(nil)
 var _ fs.NodeReaddirer = (*FSCard)(nil)
 
+// Lookup implements the fs.NodeLookuper interface.
 func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
 	n := c.GetChild(name)
@@ -78,6 +80,7 @@ func (c *FSCard) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	return n, 0
 }
 
+// Readdir implements the fs.NodeReaddirer interface.
 func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	imageURL, err := c.s.GetCardImageURL(ctx, c.id)
 	if err != nil {
@@ -100,6 +103,8 @@ func (c *FSCard) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	return fs.NewListDirStream(entries), 0
 }
 
+// FSCardsDir represents the directory containing all the card names
+// as subdirectories.
 type FSCardsDir struct {
 	fs.Inode
 	s  forgefs.Storage
@@ -108,6 +113,7 @@ type FSCardsDir struct {
 	cards map[string]string
 }
 
+// NewFSCardsDir creates a new FSCardsDir instance.
 func NewFSCardsDir(
 	ctx context.Context, s forgefs.Storage, im *fsutil.ImageManager) (
 	*FSCardsDir, error) {
@@ -130,6 +136,7 @@ var _ fs.InodeEmbedder = (*FSCardsDir)(nil)
 var _ fs.NodeLookuper = (*FSCardsDir)(nil)
 var _ fs.NodeReaddirer = (*FSCardsDir)(nil)
 
+// Lookup implements the fs.NodeLookuper interface.
 func (cd *FSCardsDir) Lookup(
 	ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
@@ -158,6 +165,7 @@ func (cd *FSCardsDir) Lookup(
 	return n, 0
 }
 
+// Readdir implements the fs.NodeReaddirer interface.
 func (cd *FSCardsDir) Readdir(ctx context.Context) (
 	fs.DirStream, syscall.Errno) {
 	entries := make([]fuse.DirEntry, 0, len(cd.cards))
@@ -171,6 +179,8 @@ func (cd *FSCardsDir) Readdir(ctx context.Context) (
 	return fs.NewListDirStream(entries), 0
 }
 
+// FSDeckHouseDir represents a directory containing symlinks to all
+// the cards for one house in a deck.
 type FSDeckHouseDir struct {
 	fs.Inode
 
@@ -182,6 +192,7 @@ var _ fs.InodeEmbedder = (*FSDeckHouseDir)(nil)
 var _ fs.NodeLookuper = (*FSDeckHouseDir)(nil)
 var _ fs.NodeReaddirer = (*FSDeckHouseDir)(nil)
 
+// Lookup implements the fs.NodeLookuper interface.
 func (dh *FSDeckHouseDir) Lookup(
 	ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
@@ -220,7 +231,8 @@ func (dh *FSDeckHouseDir) Lookup(
 	return n, 0
 }
 
-func (mdd *FSDeckHouseDir) Readdir(ctx context.Context) (
+// Readdir implements the fs.NodeReaddirer interface.
+func (dh *FSDeckHouseDir) Readdir(ctx context.Context) (
 	fs.DirStream, syscall.Errno) {
 	entries := make([]fuse.DirEntry, 0, numCardsInHouse)
 	for i := 1; i <= numCardsInHouse; i++ {
@@ -233,6 +245,8 @@ func (mdd *FSDeckHouseDir) Readdir(ctx context.Context) (
 	return fs.NewListDirStream(entries), 0
 }
 
+// FSDeckCardsDir represents a directory containing subdirectories for
+// each house in a deck.
 type FSDeckCardsDir struct {
 	fs.Inode
 
@@ -243,6 +257,7 @@ var _ fs.InodeEmbedder = (*FSDeckCardsDir)(nil)
 var _ fs.NodeLookuper = (*FSDeckCardsDir)(nil)
 var _ fs.NodeReaddirer = (*FSDeckCardsDir)(nil)
 
+// Lookup implements the fs.NodeLookuper interface.
 func (dcd *FSDeckCardsDir) Lookup(
 	ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
@@ -276,6 +291,7 @@ func (dcd *FSDeckCardsDir) Lookup(
 	return n, 0
 }
 
+// Readdir implements the fs.NodeReaddirer interface.
 func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 	fs.DirStream, syscall.Errno) {
 	entries := make([]fuse.DirEntry, 0, len(dcd.d.DeckInfo.Houses))
@@ -289,6 +305,7 @@ func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 	return fs.NewListDirStream(entries), 0
 }
 
+// FSDeck represents the directory containing info about one deck.
 type FSDeck struct {
 	fs.Inode
 	s  forgefs.Storage
@@ -324,6 +341,7 @@ func (d *FSDeck) getDeck(ctx context.Context) (*forgefs.Deck, error) {
 	return deck, nil
 }
 
+// Lookup implements the fs.NodeLookuper interface.
 func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
 	n := d.GetChild(name)
@@ -380,7 +398,8 @@ func (d *FSDeck) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (
 	return n, 0
 }
 
-func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+// Readdir implements the fs.NodeReaddirer interface.
+func (d *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	entries := []fuse.DirEntry{
 		{
 			Name: fsutil.DeckJSONFilename,
@@ -396,6 +415,9 @@ func (c *FSDeck) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	return fs.NewListDirStream(entries), 0
 }
 
+// FSMyDecksDir represents a directory containing subdirectory for
+// each deck of the user running the program, optionally filtered with
+// constraints.
 type FSMyDecksDir struct {
 	fs.Inode
 	s  forgefs.Storage
@@ -406,6 +428,7 @@ type FSMyDecksDir struct {
 	filterRoot *filter.Node
 }
 
+// NewFSMyDecksDir creates a new unfiltered FSMyDecksDir instance.
 func NewFSMyDecksDir(
 	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
 	im *fsutil.ImageManager) (*FSMyDecksDir, error) {
@@ -425,6 +448,8 @@ func NewFSMyDecksDir(
 	return mdd, nil
 }
 
+// NewFSMyDecksDirWithFilter creates a new FSMyDecksDir instance, with
+// the deck list filtered by the given filter.
 func NewFSMyDecksDirWithFilter(
 	ctx context.Context, s forgefs.Storage, da forgefs.DataFetcher,
 	im *fsutil.ImageManager, filterRoot *filter.Node) (
@@ -450,6 +475,7 @@ var _ fs.InodeEmbedder = (*FSMyDecksDir)(nil)
 var _ fs.NodeLookuper = (*FSMyDecksDir)(nil)
 var _ fs.NodeReaddirer = (*FSMyDecksDir)(nil)
 
+// Lookup implements the fs.NodeLookuper interface.
 func (mdd *FSMyDecksDir) Lookup(
 	ctx context.Context, name string, out *fuse.EntryOut) (
 	*fs.Inode, syscall.Errno) {
@@ -502,6 +528,7 @@ func (mdd *FSMyDecksDir) Lookup(
 	return n, 0
 }
 
+// Readdir implements the fs.NodeReaddirer interface.
 func (mdd *FSMyDecksDir) Readdir(ctx context.Context) (
 	fs.DirStream, syscall.Errno) {
 	entries := make([]fuse.DirEntry, 0, len(mdd.decks))
@@ -523,6 +550,7 @@ type FSRoot struct {
 	im *fsutil.ImageManager
 }
 
+// NewFSRoot creates a new `FSRoot` instance.
 func NewFSRoot(
 	s forgefs.Storage, da forgefs.DataFetcher,
 	im *fsutil.ImageManager) *FSRoot {
@@ -558,6 +586,7 @@ func (r *FSRoot) getMyDecksDir(ctx context.Context) (*fs.Inode, error) {
 	return mddNode, nil
 }
 
+// OnAdd implements the fs.NodeOnAdder interface.
 func (r *FSRoot) OnAdd(ctx context.Context) {
 	cdNode, err := r.getCardsDir(ctx)
 	if err != nil {

@@ -8,17 +8,19 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // load sqlite driver
 	"github.com/strib/forgefs"
 	"github.com/strib/forgefs/filter"
 )
 
+// SQLiteStorage stores deck and card info in an on-disk SQLite file.
 type SQLiteStorage struct {
 	db *sql.DB
 }
 
 var _ forgefs.Storage = (*SQLiteStorage)(nil)
 
+// NewSQLiteStorage creates a new SQLiteStorage instance.
 func NewSQLiteStorage(
 	ctx context.Context, file string) (*SQLiteStorage, error) {
 	db, err := sql.Open("sqlite3", file)
@@ -37,6 +39,7 @@ func NewSQLiteStorage(
 	return s, nil
 }
 
+// Shutdown shuts down the storage instance.
 func (s *SQLiteStorage) Shutdown() error {
 	return s.db.Close()
 }
@@ -93,6 +96,7 @@ const sqlCardsCount string = `
     SELECT COUNT(*) FROM cards;
 `
 
+// GetCardsCount implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetCardsCount(ctx context.Context) (
 	count int, err error) {
 	row := s.db.QueryRowContext(ctx, sqlCardsCount)
@@ -108,6 +112,7 @@ const sqlCardStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?);
 `
 
+// StoreCards implements the forgefs.Storage interface.
 func (s *SQLiteStorage) StoreCards(
 	ctx context.Context, cards []forgefs.Card) error {
 	for _, card := range cards {
@@ -140,6 +145,7 @@ const sqlCardNames string = `
     SELECT id, title FROM cards;
 `
 
+// GetCardTitles implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetCardTitles(ctx context.Context) (
 	titles map[string]string, err error) {
 	titles = make(map[string]string)
@@ -173,6 +179,7 @@ const sqlCardImageURL string = `
     WHERE id=?;
 `
 
+// GetCardImageURL implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetCardImageURL(ctx context.Context, id string) (
 	url string, err error) {
 	row := s.db.QueryRowContext(ctx, sqlCardImageURL, id)
@@ -188,6 +195,7 @@ const sqlCardJSON string = `
     WHERE id=?;
 `
 
+// GetCard implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetCard(ctx context.Context, id string) (
 	card *forgefs.Card, err error) {
 	row := s.db.QueryRowContext(ctx, sqlCardJSON, id)
@@ -208,6 +216,7 @@ const sqlDecksCount string = `
     SELECT COUNT(*) FROM decks;
 `
 
+// GetDecksCount implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetDecksCount(ctx context.Context) (
 	count int, err error) {
 	row := s.db.QueryRowContext(ctx, sqlDecksCount)
@@ -223,6 +232,7 @@ const sqlDeckStore string = `
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
+// StoreDecks implements the forgefs.Storage interface.
 func (s *SQLiteStorage) StoreDecks(
 	ctx context.Context, decks []forgefs.Deck) error {
 	for _, deck := range decks {
@@ -267,6 +277,7 @@ const sqlMyDeckNames string = `
     WHERE owned_by_me = 1;
 `
 
+// GetMyDeckNames implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetMyDeckNames(ctx context.Context) (
 	names map[string]string, err error) {
 	names = make(map[string]string)
@@ -432,6 +443,7 @@ const sqlMyDeckNamesFilterPrefix string = `
     WHERE owned_by_me = 1 AND
 `
 
+// GetMyDeckNamesWithFilter implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetMyDeckNamesWithFilter(
 	ctx context.Context, filterRoot *filter.Node) (
 	names map[string]string, err error) {
@@ -471,6 +483,7 @@ const sqlDeckJSON string = `
     WHERE id=?;
 `
 
+// GetDeck implements the forgefs.Storage interface.
 func (s *SQLiteStorage) GetDeck(ctx context.Context, id string) (
 	deck *forgefs.Deck, err error) {
 	row := s.db.QueryRowContext(ctx, sqlDeckJSON, id)
