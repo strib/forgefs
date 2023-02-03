@@ -1,15 +1,19 @@
 package forgefs
 
+// CardNumber represents the number of a card within an expansion.
 type CardNumber struct {
 	CardNumber string `json:"cardNumber,omitempty"`
 	Expansion  string `json:"expansion,omitempty"`
 }
 
+// ExpansionWins represents the record of a card within a particular
+// expansion.
 type ExpansionWins struct {
 	Losses int `json:"losses,omitempty"`
 	Wins   int `json:"wins,omitempty"`
 }
 
+// Trait represents the traits of a card.
 type Trait struct {
 	CardName         string   `json:"cardName,omitempty"`
 	CardTraits       []string `json:"cardTraits,omitempty"`
@@ -28,6 +32,8 @@ type Trait struct {
 	Trait            string   `json:"trait,omitempty"`
 }
 
+// ExtraCardInfo represents detailed information and ratings about a
+// card.
 type ExtraCardInfo struct {
 	Active                bool    `json:"active,omitempty"`
 	AdaptiveScore         int     `json:"adaptiveScore,omitempty"`
@@ -67,6 +73,7 @@ type ExtraCardInfo struct {
 	Version               int     `json:"version,omitempty"`
 }
 
+// Card represents all the data about a particular card.
 type Card struct {
 	AERCScore        float64                  `json:"aercScore,omitempty"`
 	AERCScoreAverage float64                  `json:"aercScoreAverage,omitempty"`
@@ -103,6 +110,8 @@ type Card struct {
 	Wins             int                      `json:"wins,omitempty"`
 }
 
+// CardInDeck represents data about a specific card in a specific
+// deck.
 type CardInDeck struct {
 	CardTitle string `json:"cardTitle,omitempty"`
 	Rarity    string `json:"rarity,omitempty"`
@@ -111,11 +120,15 @@ type CardInDeck struct {
 	Anomaly   bool   `json:"anomaly,omitempty"`
 }
 
+// HouseInDeck represents a house and all its cards in a specific
+// deck.
 type HouseInDeck struct {
 	House string       `json:"house,omitempty"`
 	Cards []CardInDeck `json:"cards,omitempty"`
 }
 
+// DeckInfo represents detailed info and ratings about a specific
+// deck.
 type DeckInfo struct {
 	ActionCount            int           `json:"actionCount,omitempty"`
 	AercScore              int           `json:"aercScore,omitempty"`
@@ -148,6 +161,7 @@ type DeckInfo struct {
 	TotalPower             int           `json:"totalPower,omitempty"`
 }
 
+// Deck represents all the data about a specific deck.
 type Deck struct {
 	DeckInfo  DeckInfo `json:"deck,omitempty"`
 	Funny     bool     `json:"funny,omitempty"`
