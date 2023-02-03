@@ -378,10 +378,12 @@ func filterNodeToSQLConstraint(n *filter.Node) (string, error) {
 		if n.Constraint.Value.Float != nil {
 			return fmt.Sprintf(
 				"%s %s %f", col, op, *n.Constraint.Value.Float), nil
-		} else if n.Constraint.Value.Int != nil {
+		}
+		if n.Constraint.Value.Int != nil {
 			return fmt.Sprintf(
 				"%s %s %d", col, op, *n.Constraint.Value.Int), nil
-		} else if n.Constraint.Value.String != nil {
+		}
+		if n.Constraint.Value.String != nil {
 			val := normalizeString(*n.Constraint.Value.String)
 			if col == "house" {
 				return fmt.Sprintf(
@@ -389,7 +391,8 @@ func filterNodeToSQLConstraint(n *filter.Node) (string, error) {
 					val, val, val), nil
 			}
 			return fmt.Sprintf("%s %s \"%s\"", col, op, val), nil
-		} else if len(n.Constraint.Value.Range) > 0 {
+		}
+		if len(n.Constraint.Value.Range) > 0 {
 			min := n.Constraint.Value.MinString()
 			max := n.Constraint.Value.MaxString()
 			if min != "" && max != "" {
@@ -399,9 +402,8 @@ func filterNodeToSQLConstraint(n *filter.Node) (string, error) {
 				return fmt.Sprintf("%s >= %s", col, min), nil
 			}
 			return fmt.Sprintf("%s <= %s", col, max), nil
-		} else {
-			return "", fmt.Errorf("unrecognized value")
 		}
+		return "", fmt.Errorf("unrecognized value")
 	}
 
 	var boolOp string
