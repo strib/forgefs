@@ -385,7 +385,7 @@ func filterNodeToSQLConstraint(n *filter.Node) (string, error) {
 			val := normalizeString(*n.Constraint.Value.String)
 			if col == "house" {
 				return fmt.Sprintf(
-					"(house1 = \"%s\" OR  house2 = \"%s\" OR  house3 = \"%s\")",
+					"(house1 = \"%s\" OR house2 = \"%s\" OR house3 = \"%s\")",
 					val, val, val), nil
 			}
 			return fmt.Sprintf("%s %s \"%s\"", col, op, val), nil
