@@ -255,27 +255,27 @@ func (ec *ExprChain) String() string {
 
 // MakeTree builds up a filter tree for the expression chain.
 func (ec *ExprChain) MakeTree() *Node {
-	if len(ex.OpRight) == 0 {
-		return ex.Left.MakeTree()
+	if len(ec.OpRight) == 0 {
+		return ec.Left.MakeTree()
 	}
 
 	// AND has a higher precedence than OR.  Which means, in a chain,
 	// we need to make sure to output the first OR node at the top of
 	// the tree.
 	splitAt := 0
-	for i, r := range ex.OpRight {
+	for i, r := range ec.OpRight {
 		if _, ok := r.Op.(Or); ok {
 			splitAt = i
 			break
 		}
 	}
 
-	r := ex.OpRight[splitAt]
+	r := ec.OpRight[splitAt]
 	return &Node{
 		Op: r.Op,
 		Left: (&ExprChain{
-			Left:    ex.Left,
-			OpRight: ex.OpRight[:splitAt],
+			Left:    ec.Left,
+			OpRight: ec.OpRight[:splitAt],
 		}).MakeTree(),
 		Right: r.Right.Expr.MakeTree(),
 	}

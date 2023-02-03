@@ -10,6 +10,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// SkyJAPI enables fetching of deck list images from SkyJedi's TTS
+// server.  Requests are rate-limited to be nice.
 type SkyJAPI struct {
 	baseURL string
 	limiter *rate.Limiter
@@ -23,6 +25,7 @@ const (
 	skyjDeckImageSuffix = ".jpg"
 )
 
+// NewSkyJAPI returns a new instance of SkyJAPI.
 func NewSkyJAPI(baseURL string) *SkyJAPI {
 	return &SkyJAPI{
 		baseURL: baseURL,
@@ -30,10 +33,12 @@ func NewSkyJAPI(baseURL string) *SkyJAPI {
 	}
 }
 
+// GetDeckImageSuffix implements the forgefs.DeckImageFetcher interface.
 func (sja *SkyJAPI) GetDeckImageSuffix() string {
 	return skyjDeckImageSuffix
 }
 
+// GetDeckImage implements the forgefs.DeckImageFetcher interface.
 func (sja *SkyJAPI) GetDeckImage(ctx context.Context, deckID string) (
 	data []byte, err error) {
 	err = sja.limiter.Wait(ctx)
