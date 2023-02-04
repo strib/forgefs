@@ -1,9 +1,19 @@
 issues:
   exclude:
     - "structtag: struct field tag (.*) not compatible"
+  include:
+    - EXC0012 # comments-checking
+    - EXC0014 # comments-checking
 
 linters:
   enable:
     - gofmt
     - gocritic
     - unconvert
+    - revive
+    - godot
+    - govet
+
+linter-settings:
+  revive:
+    enable-all-rules: true
