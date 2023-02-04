@@ -213,6 +213,17 @@ func (ms *mockStorage) GetMyDeckNamesWithFilter(
 	return names, nil
 }
 
+func (ms *mockStorage) GetSampleDeckWithVersion(ctx context.Context) (
+	deckID string, sasVersion int, err error) {
+	return "", 0, errors.New("Not implemented in the mock")
+}
+
+func (ms *mockStorage) Reset(ctx context.Context) error {
+	ms.cards = make(map[string]forgefs.Card)
+	ms.decks = make(map[string]forgefs.Deck)
+	return nil
+}
+
 func (ms *mockStorage) GetDeck(_ context.Context, id string) (
 	deck *forgefs.Deck, err error) {
 	d := ms.decks[id]

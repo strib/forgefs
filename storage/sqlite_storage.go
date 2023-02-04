@@ -152,7 +152,7 @@ const sqlCardsCount string = `
     SELECT COUNT(*) FROM cards;
 `
 
-// GetCardsCount implements the forgefs.Storage interface.
+// GetCardsCount returns the number of stored cards.
 func (s *SQLiteStorage) GetCardsCount(ctx context.Context) (
 	count int, err error) {
 	row := s.db.QueryRowContext(ctx, sqlCardsCount)
@@ -272,7 +272,7 @@ const sqlDecksCount string = `
     SELECT COUNT(*) FROM decks;
 `
 
-// GetDecksCount implements the forgefs.Storage interface.
+// GetDecksCount returns the number of stored decks.
 func (s *SQLiteStorage) GetDecksCount(ctx context.Context) (
 	count int, err error) {
 	row := s.db.QueryRowContext(ctx, sqlDecksCount)
@@ -556,4 +556,43 @@ func (s *SQLiteStorage) GetDeck(ctx context.Context, id string) (
 		return nil, err
 	}
 	return &d, nil
+}
+
+const sqlSASVersion string = `
+    SELECT id, sas_version FROM decks
+    WHERE sas_version != 0
+    LIMIT 1;
+`
+
+// GetSampleDeckWithVersion returns a sample deck and its SAS version.
+func (s *SQLiteStorage) GetSampleDeckWithVersion(ctx context.Context) (
+	deckID string, sasVersion int, err error) {
+	row := s.db.QueryRowContext(ctx, sqlSASVersion)
+	err = row.Scan(&deckID, &sasVersion)
+	switch err {
+	case nil:
+		return deckID, sasVersion, nil
+	case sql.ErrNoRows:
+		return "", 0, nil
+	default:
+		return "", 0, err
+	}
+}
+
+const sqlDropVersionTable string = `
+    DROP TABLE IF EXISTS version;
+`
+
+// Reset implements the forgefs.Storage interface.
+func (s *SQLiteStorage) Reset(ctx context.Context) error {
+	// Drop all the tables and re-init.
+	_, err := s.db.ExecContext(ctx, sqlDropVersionTable)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, sqlDropTables)
+	if err != nil {
+		return err
+	}
+	return s.init(ctx)
 }

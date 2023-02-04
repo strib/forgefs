@@ -19,6 +19,7 @@ import (
 	"github.com/strib/forgefs/fusefs"
 	"github.com/strib/forgefs/net"
 	"github.com/strib/forgefs/storage"
+	"github.com/strib/forgefs/util"
 )
 
 const (
@@ -117,6 +118,13 @@ func doMain() (err error) {
 		}
 	}()
 
+	da := net.NewDoKAPI(config.DoKAddr, config.DoKAPIKey)
+	err = util.CheckSASVersion(ctx, da, s)
+	if err != nil {
+		// Not a fatal error.
+		fmt.Printf("Could not check SAS version: %+v\n", err)
+	}
+
 	count, err := s.GetCardsCount(ctx)
 	if err != nil {
 		return err
@@ -124,7 +132,6 @@ func doMain() (err error) {
 
 	fmt.Printf("Found %d cards\n", count)
 
-	da := net.NewDoKAPI(config.DoKAddr, config.DoKAPIKey)
 	if count == 0 {
 		cards, err := da.GetCards(ctx)
 		if err != nil {

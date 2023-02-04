@@ -59,6 +59,11 @@ type Storage interface {
 		names map[string]string, err error)
 	// GetDeck returns the full deck object for the given `id`.
 	GetDeck(ctx context.Context, id string) (deck *Deck, err error)
+	// GetSampleDeckWithVersion returns a sample deck and its SAS version.
+	GetSampleDeckWithVersion(ctx context.Context) (
+		deckID string, sasVersion int, err error)
+	// Resets the storage, deleting all current data.
+	Reset(ctx context.Context) error
 }
 
 // ImageCache stores card and deck images locally, for performance.
