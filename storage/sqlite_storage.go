@@ -13,6 +13,12 @@ import (
 	"github.com/strib/forgefs/filter"
 )
 
+const (
+	// If the existing data version is lower than this, we should
+	// delete the DB on startup.   If it's larger, we should error.
+	sqlDataVersion = 1
+)
+
 // SQLiteStorage stores deck and card info in an on-disk SQLite file.
 type SQLiteStorage struct {
 	db *sql.DB
@@ -43,6 +49,11 @@ func NewSQLiteStorage(
 func (s *SQLiteStorage) Shutdown() error {
 	return s.db.Close()
 }
+
+const sqlVersionCreate string = `
+    CREATE TABLE IF NOT EXISTS version (
+    version integer NOT NULL PRIMARY KEY
+);`
 
 const sqlCardsCreate string = `
     CREATE TABLE IF NOT EXISTS cards (
@@ -78,8 +89,53 @@ const sqlDecksCreate string = `
     json blob NOT NULL
 );`
 
+const sqlVersion string = `
+    SELECT COALESCE(MAX(version), 0) FROM version;
+`
+
+const sqlDropTables string = `
+    DROP TABLE IF EXISTS decks;
+    DROP TABLE IF EXISTS cards;
+`
+
+const sqlWriteVersion string = `
+    INSERT INTO version (version) VALUES (?);
+`
+
 func (s *SQLiteStorage) init(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, sqlCardsCreate)
+	_, err := s.db.ExecContext(ctx, sqlVersionCreate)
+	if err != nil {
+		return err
+	}
+
+	var currVersion int
+	row := s.db.QueryRowContext(ctx, sqlVersion)
+	err = row.Scan(&currVersion)
+	if err != nil {
+		return err
+	}
+	switch {
+	case currVersion < sqlDataVersion:
+		// Drop all tables.
+		_, err := s.db.ExecContext(ctx, sqlDropTables)
+		if err != nil {
+			return err
+		}
+		fallthrough
+	case currVersion == 0:
+		_, err := s.db.ExecContext(ctx, sqlWriteVersion, sqlDataVersion)
+		if err != nil {
+			return err
+		}
+	case currVersion > sqlDataVersion:
+		return fmt.Errorf(
+			"Current DB version (%d) is bigger than the code version (%d)",
+			currVersion, sqlDataVersion)
+	default:
+		// Nothing to do since the version matches.
+	}
+
+	_, err = s.db.ExecContext(ctx, sqlCardsCreate)
 	if err != nil {
 		return err
 	}
