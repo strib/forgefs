@@ -163,9 +163,10 @@ type DeckInfo struct {
 
 // Deck represents all the data about a specific deck.
 type Deck struct {
-	DeckInfo  DeckInfo `json:"deck,omitempty"`
-	Funny     bool     `json:"funny,omitempty"`
-	Notes     string   `json:"notes,omitempty"`
-	OwnedByMe bool     `json:"ownedByMe,omitempty"`
-	Wishlist  bool     `json:"wishlist,omitempty"`
+	DeckInfo   DeckInfo `json:"deck,omitempty"`
+	Funny      bool     `json:"funny,omitempty"`
+	Notes      string   `json:"notes,omitempty"`
+	OwnedByMe  bool     `json:"ownedByMe,omitempty"`
+	Wishlist   bool     `json:"wishlist,omitempty"`
+	SASVersion int      `json:"sasVersion,omitempty"`
 }

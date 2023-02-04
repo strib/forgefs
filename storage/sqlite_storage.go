@@ -309,7 +309,7 @@ func (s *SQLiteStorage) StoreDecks(
 
 		result, err := s.db.ExecContext(
 			ctx, sqlDeckStore, info.KeyforgeID, info.Name, info.Expansion,
-			info.SasRating, info.AercVersion, info.AercScore,
+			info.SasRating, deck.SASVersion, info.AercScore,
 			info.AmberControl, info.ExpectedAmber, info.ArtifactControl,
 			info.CreatureControl, info.Efficiency, info.Disruption,
 			house1, house2, house3, deck.OwnedByMe, deck.Funny, deck.Wishlist,

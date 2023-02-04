@@ -326,12 +326,13 @@ func (d *FSDeck) getDeck(ctx context.Context) (*forgefs.Deck, error) {
 
 	// Lookup the houses if we don't have them yet, and cache that
 	// in the DB.
-	if len(deck.DeckInfo.Houses) == 0 {
+	if len(deck.DeckInfo.Houses) == 0 || deck.SASVersion == 0 {
 		newDeck, err := d.da.GetDeck(ctx, d.id)
 		if err != nil {
 			return nil, fs.ToErrno(err)
 		}
 		deck.DeckInfo.Houses = newDeck.DeckInfo.Houses
+		deck.SASVersion = newDeck.SASVersion
 		err = d.s.StoreDecks(ctx, []forgefs.Deck{*deck})
 		if err != nil {
 			return nil, fs.ToErrno(err)
