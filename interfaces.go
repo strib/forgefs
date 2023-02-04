@@ -13,8 +13,11 @@ type DataFetcher interface {
 	// GetMyDecks gets all the decks associated with the user running
 	// this program.
 	GetMyDecks(ctx context.Context) (decks []Deck, err error)
-	// GetDeck gets a full Deck object for the given `id`.
-	GetDeck(ctx context.Context, id string) (deck Deck, err error)
+	// GetDeck returns the full deck object for the given `id`. If
+	// `deck` is not nil, it will be updated with whatever data has
+	// changed, leaving the other existing fields intact.
+	GetDeck(ctx context.Context, id string, deck *Deck) (
+		updatedDeck Deck, err error)
 }
 
 // CardImageFetcher gets the front images for cards.

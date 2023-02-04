@@ -39,7 +39,8 @@ func (mdf *mockDataFetcher) GetMyDecks(
 }
 
 func (mdf *mockDataFetcher) GetDeck(
-	_ context.Context, id string) (deck forgefs.Deck, err error) {
+	_ context.Context, id string, _ *forgefs.Deck) (
+	deck forgefs.Deck, err error) {
 	return mdf.myDecks[id], nil
 }
 
@@ -392,6 +393,7 @@ func TestFSSimple(t *testing.T) {
 			House: h3,
 		},
 	}
+	d1.SASVersion = 42
 	mdf.myDecks[d1ID] = d1
 
 	mountTmpDir(t, mountpoint, root)
