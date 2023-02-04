@@ -284,8 +284,10 @@ func (s *SQLiteStorage) GetDecksCount(ctx context.Context) (
 }
 
 const sqlDeckStore string = `
-    INSERT OR REPLACE INTO decks (id, name, expansion, sas, sas_version, aerc, a, e, r, c, f, d, house1, house2, house3, owned_by_me, funny, wish_list, json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    INSERT OR REPLACE INTO decks (
+        id, name, expansion, sas, sas_version, aerc, a, e, r, c, f, d,
+        house1, house2, house3, owned_by_me, funny, wish_list, json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
 // StoreDecks implements the forgefs.Storage interface.

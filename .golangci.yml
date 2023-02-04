@@ -13,7 +13,10 @@ linters:
     - revive
     - godot
     - govet
+    - lll
 
 linter-settings:
   revive:
     enable-all-rules: true
+  lll:
+    line-length: 120
