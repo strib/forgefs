@@ -21,7 +21,7 @@ func CheckSASVersion(
 		return nil
 	}
 
-	deck, err := df.GetDeck(ctx, deckID)
+	deck, err := df.GetDeck(ctx, deckID, nil)
 	if err != nil {
 		return nil
 	}

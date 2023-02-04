@@ -120,8 +120,8 @@ func (da *DoKAPI) GetMyDecks(ctx context.Context) (
 }
 
 // GetDeck implements the forgefs.DataFetcher interface.
-func (da *DoKAPI) GetDeck(ctx context.Context, id string) (
-	deck forgefs.Deck, err error) {
+func (da *DoKAPI) GetDeck(ctx context.Context, id string, deck *forgefs.Deck) (
+	updatedDeck forgefs.Deck, err error) {
 	err = da.wait(ctx)
 	if err != nil {
 		return forgefs.Deck{}, err
@@ -151,9 +151,12 @@ func (da *DoKAPI) GetDeck(ctx context.Context, id string) (
 	if err != nil {
 		return forgefs.Deck{}, err
 	}
-	err = json.Unmarshal(body, &deck)
+	if deck != nil {
+		updatedDeck = *deck
+	}
+	err = json.Unmarshal(body, &updatedDeck)
 	if err != nil {
 		return forgefs.Deck{}, err
 	}
-	return deck, nil
+	return updatedDeck, nil
 }
