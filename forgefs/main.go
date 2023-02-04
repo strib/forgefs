@@ -9,7 +9,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
@@ -28,6 +30,15 @@ const (
 )
 
 var defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".forgefs_config.json")
+
+func sigHandler(signal os.Signal, server *fuse.Server) error {
+	switch signal {
+	case syscall.SIGTERM, syscall.SIGINT:
+		fmt.Println("Unmounting")
+		return server.Unmount()
+	}
+	return nil
+}
 
 func doMain() (err error) {
 	// Start with built-in defaults.
@@ -161,6 +172,19 @@ func doMain() (err error) {
 	if err != nil {
 		return err
 	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh)
+
+	go func() {
+		for {
+			s := <-sigCh
+			err := sigHandler(s, server)
+			if err != nil {
+				fmt.Printf("Couldn't handle signal: %+v", err)
+			}
+		}
+	}()
 
 	server.Wait()
 	return nil
