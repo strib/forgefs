@@ -53,17 +53,34 @@ the awesome folks at
 * `d`: disruption
 * `sas`: overall SAS score
 * `aerc`: AERC score
-* `expansion` or `set`: the acronym of the Keyforge set of the deck (e.g., MM)
-* `house`: matches one of the houses in the deck
+* `expansion` or `set`: the acronym of the Keyforge set of the deck.
+  These are case-insensitive:
+  * CotA
+  * AoA
+  * WC
+  * MM
+  * DT
+* `house`: matches one of the houses in the deck.  These are also
+  case-insensitive:
+  * Brobnar
+  * Dis
+  * Logos
+  * Mars
+  * Sanctum
+  * Saurian
+  * Shadows
+  * Staralliance
+  * Unfathomable
+  * Untamed
 
 You can choose one of those stats, followed by an `=` and either the
 exact number you want to match, or a _range_.  Ranges are one or two
 numbers combined with a `:`.  The minimum number goes to the left of
 the `:`, and the maximum number goes to the right.  For example:
 
-* Amber control minimum of 10: `10:`
-* Creature control maximum of 5: `:5`
-* SAS between 80 and 90 (inclusive): `80:90`
+* Amber control minimum of 10: `a=10:`
+* Creature control maximum of 5: `c=:5`
+* SAS between 80 and 90 (inclusive): `sas=80:90`
 
 What's more, you can combine these stat filters using boolean logic
 and parentheses. The possible boolean operators are:
@@ -123,8 +140,8 @@ that looks something like this:
   }
 ```
 
-where "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" is your real
-decksofkeyforge API key.
+where you need to substitute your real decksofkeyforge API key (in
+quotes) in place of "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX".
 
 By default, the mountpoint for forgefs is `$HOME/ffs`, though that is
 also configurable on the command line or in the config file (with a
