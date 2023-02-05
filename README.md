@@ -120,8 +120,8 @@ go get github.com/strib/forgefs
 go install github.com/strib/forgefs/forgefs
 ```
 
-Alternatively, we will soon provide a pre-built package for
-Debian/Ubuntu.
+Alternatively, you can find a pre-built package for Debian/Ubuntu
+[here](https://github.com/strib/forgefs/releases/).
 
 ## Configuration/Run:
 
