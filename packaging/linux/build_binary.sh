@@ -9,14 +9,15 @@ this_repo="$(git -C "$here" rev-parse --show-toplevel ||
 # Take the first argument as the build root, or a tmp dir if there is no
 # second argument. Absolutify the build root, because we cd around in this
 # script, and also because GOPATH is not allowed to be relative.
-build_root="${1:-/tmp/keybase_build_$(date +%Y_%m_%d_%H%M%S)}"
+mode="$1"
+build_root="${2:-/tmp/keybase_build_$(date +%Y_%m_%d_%H%M%S)}"
 mkdir -p "$build_root"
 build_root="$(realpath "$build_root")"
 
 # Record the version now, and write it to the build root. Because it
 # uses a timestamp, it's important that other scripts use this file
 # instead of recomputing the version themselves.
-version="$("$here/../version.sh" "$@")"
+version="$("$here/../version.sh" "$mode")"
 echo -n "$version" > "$build_root/VERSION"
 
 echo "Building version $version in $build_root"
