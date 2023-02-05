@@ -21,6 +21,9 @@ echo -n "$version" > "$build_root/VERSION"
 
 echo "Building version $version in $build_root"
 
+# Required for go-sqlite3.
+export CGO_ENABLED=1
+
 build_one_architecture() {
   layout_dir="$build_root/binaries/$debian_arch"
   mkdir -p "$layout_dir/usr/bin"
@@ -29,6 +32,13 @@ build_one_architecture() {
   export GOPATH="$build_root/gopaths/$debian_arch"
   mkdir -p "$GOPATH/src/github.com/strib"
   ln -snf "$this_repo" "$GOPATH/src/github.com/strib/forgefs"
+
+  # Copy in the systemd unit files.
+  units_dir="$layout_dir/usr/lib/systemd/user"
+  mkdir -p "$units_dir"
+  cp "$here/systemd"/* "$units_dir"
+
+  cp -p "$here/run_forgefs" "$layout_dir/usr/bin"
 
   # Build the client binary. Note that `go build` reads $GOARCH.
   echo "Building forgefs for $GOARCH..."
@@ -41,8 +51,9 @@ export GOARCH=amd64
 export debian_arch=amd64
 build_one_architecture
 
-echo "forgefs: Building for x86"
-export GOARCH=386
-export debian_arch=i386
-build_one_architecture
+# Building for i386 requires cgo i386 headers.
+#echo "forgefs: Building for x86"
+#export GOARCH=386
+#export debian_arch=i386
+#build_one_architecture
 

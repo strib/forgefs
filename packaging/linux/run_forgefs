@@ -1,0 +1,19 @@
+#! /usr/bin/env bash
+
+# Make sure the user has an API key.
+if [ -z "$(/usr/bin/forgefs --show-api-key)" ]; then
+  echo "First add a decksofkeyforge API key to your forgefs config file."
+  echo "  - Create a key at https://decksofkeyforge.com/about/sellers-and-devs"
+  echo "  - Add it to your forgefs config file, which should look something like:"
+  echo "{"
+  echo "  \"dok_api_key\": \"XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\""
+  echo "}"
+  exit -1
+fi
+
+mkdir -p "$(/usr/bin/forgefs --show-mountpoint)"
+mkdir -p "$(/usr/bin/forgefs --show-image-cache-dir)"
+
+systemctl --user daemon-reload
+echo "Starting (or restarting) forgefs systemd service (please be patient)..."
+systemctl --user restart forgefs

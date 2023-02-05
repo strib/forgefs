@@ -1,0 +1,20 @@
+[Unit]
+Description=Keyforge filesystem service
+
+[Service]
+# "notify" means we promise to call SdNotify() at the end of startup.
+Type=notify
+
+# Forcibly unmount ~/ffs in case there's anything there. The "-" prefix
+# means that error codes from this command are ignored.
+ExecStartPre=-/bin/sh -c 'fusermount -uz "$(/usr/bin/forgefs --show-mountpoint)"'
+
+ExecStart=/usr/bin/forgefs
+
+# This should have already occurred in the signal handler in kbfsfuse.
+ExecStop=-/bin/sh -c 'fusermount -uz "$(/usr/bin/forgefs --show-mountpoint)"'
+
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
