@@ -1,0 +1,9 @@
+Package: forgefs
+Version: @@VERSION@@
+Architecture: @@ARCHITECTURE@@
+Installed-Size: @@SIZE@@
+Maintainer: Jeremy Stribling <strib@alum.mit.edu>
+Section: misc
+Priority: optional
+@@DEPENDENCIES@@
+Description: The Keyforge File System

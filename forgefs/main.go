@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	sdDaemon "github.com/coreos/go-systemd/daemon"
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/strib/forgefs/fsutil"
@@ -23,14 +24,16 @@ import (
 )
 
 const (
-	defaultDoKAddr       = "https://decksofkeyforge.com"
-	defaultSkyJAddr      = "https://tts.skyj.io"
-	defaultDBFile        = ".forgefs.sqlite"
-	defaultMountpoint    = "ffs"
-	defaultImageCacheDir = ".forgefs_images"
+	defaultDoKAddr  = "https://decksofkeyforge.com"
+	defaultSkyJAddr = "https://tts.skyj.io"
 )
 
+var defaultMountpoint = filepath.Join(os.Getenv("HOME"), "ffs")
 var defaultConfigFile = filepath.Join(os.Getenv("HOME"), ".forgefs_config.json")
+var defaultDBFile = filepath.Join(
+	os.Getenv("HOME"), ".local", "share", "forgefs", "forgefs.sqlite")
+var defaultImageCacheDir = filepath.Join(
+	os.Getenv("HOME"), ".local", "share", "forgefs", "forgefs_images")
 
 func sigHandler(signal os.Signal, server *fuse.Server) error {
 	switch signal {
@@ -89,6 +92,12 @@ func doMain() (err error) {
 		"config-file", "",
 		fmt.Sprintf("Custom config file location (default %s)",
 			defaultConfigFile))
+	var showAPIKey = flag.Bool(
+		"show-api-key", false, "Print the API key and exit")
+	var showMountpoint = flag.Bool(
+		"show-mountpoint", false, "Print the mountpoint and exit")
+	var showImageCacheDir = flag.Bool(
+		"show-image-cache-dir", false, "Print the image cache dir and exit")
 	flag.Parse()
 
 	if configFile != nil && *configFile != "" {
@@ -101,6 +110,22 @@ func doMain() (err error) {
 			return err
 		}
 	}
+
+	if showMountpoint != nil && *showMountpoint {
+		fmt.Println(config.Mountpoint)
+		return nil
+	}
+
+	if showAPIKey != nil && *showAPIKey {
+		fmt.Println(config.DoKAPIKey)
+		return nil
+	}
+
+	if showImageCacheDir != nil && *showImageCacheDir {
+		fmt.Println(config.ImageCacheDir)
+		return nil
+	}
+
 	if config.DoKAPIKey == "" {
 		return errors.New("No API key given")
 	}
@@ -192,6 +217,8 @@ func doMain() (err error) {
 			}
 		}
 	}()
+
+	_, _ = sdDaemon.SdNotify(false /* unsetEnv */, "READY=1")
 
 	server.Wait()
 	return nil
