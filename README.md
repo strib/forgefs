@@ -75,8 +75,22 @@ Examples, assuming you have navigated into your `my-decks` directory:
 
 * Count all your decks with SAS between 80 and 90 (inclusive):
   ![Filter on SAS](https://user-images.githubusercontent.com/8516691/216799191-ba5cc2b8-4b1c-47ac-9cf0-6d452dee5269.png)
-* Count your deck with "perfect" stats (amber control >= 10, expected
+* Count your decks with "perfect" stats (amber control >= 10, expected
   amber >= 20, creature control >= 10, artifact control >= 1.5, and
   efficiency >= 10):
   ![Filter on perfect stats](https://user-images.githubusercontent.com/8516691/216799194-482ccc62-72be-4fa5-8ffe-5df552154658.png)
+* Count your decks with "perfect" stats _or_ a SAS of at least 80:
+  ![Filter on perfect stats or SAS of 80](https://user-images.githubusercontent.com/8516691/216799199-43c100fd-f013-40f4-8042-98453c68a61f.png)
+* Count your Mass Mutation decks with an AERC of at 68:
+  ![Filter on AERC and set](https://user-images.githubusercontent.com/8516691/216799202-c4c003a6-a149-4f29-901f-162d05c1c1e3.png)
+* Pick a random deck out of your MM decks with a SAS of at least 68:
+  ![Random deck](https://user-images.githubusercontent.com/8516691/216799204-9a43abec-b050-4a26-a756-5bc1377cf692.png)
+
+Note that the above examples are just counting directory entries
+using a standard `wc` command line tool.  Each of those directory
+entries is a full deck directory, where you can access cards and
+decklist images as well.  The only limit on what you can do with that
+is your imagination!
+
+## Install
 
