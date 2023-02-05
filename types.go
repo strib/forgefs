@@ -1,5 +1,7 @@
 package forgefs
 
+import "time"
+
 // CardNumber represents the number of a card within an expansion.
 type CardNumber struct {
 	CardNumber string `json:"cardNumber,omitempty"`
@@ -169,4 +171,12 @@ type Deck struct {
 	OwnedByMe  bool     `json:"ownedByMe,omitempty"`
 	Wishlist   bool     `json:"wishlist,omitempty"`
 	SASVersion int      `json:"sasVersion,omitempty"`
+}
+
+// DeckMetadata exposes enough data about a deck to construct
+// fliesystem metadata for it.
+type DeckMetadata struct {
+	ID        string
+	Name      string
+	DateAdded time.Time
 }

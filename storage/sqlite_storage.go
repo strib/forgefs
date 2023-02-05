@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3" // load sqlite driver
 	"github.com/strib/forgefs"
@@ -83,6 +84,7 @@ const sqlDecksCreate string = `
     house1 varchar(64) NOT NULL,
     house2 varchar(64) NOT NULL,
     house3 varchar(64) NOT NULL,
+    date_added timestamp NOT NULL,
     owned_by_me boolean NOT NULL,
     funny boolean NOT NULL,
     wish_list boolean NOT NULL,
@@ -286,8 +288,8 @@ func (s *SQLiteStorage) GetDecksCount(ctx context.Context) (
 const sqlDeckStore string = `
     INSERT OR REPLACE INTO decks (
         id, name, expansion, sas, sas_version, aerc, a, e, r, c, f, d,
-        house1, house2, house3, owned_by_me, funny, wish_list, json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        house1, house2, house3, date_added, owned_by_me, funny, wish_list, json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
 // StoreDecks implements the forgefs.Storage interface.
@@ -307,12 +309,20 @@ func (s *SQLiteStorage) StoreDecks(
 			house3 = info.Houses[2].House
 		}
 
+		var dateAdded time.Time
+		if info.DateAdded != "" {
+			dateAdded, err = time.Parse("2006-01-02", info.DateAdded)
+			if err != nil {
+				return err
+			}
+		}
 		result, err := s.db.ExecContext(
 			ctx, sqlDeckStore, info.KeyforgeID, info.Name, info.Expansion,
 			info.SasRating, deck.SASVersion, info.AercScore,
 			info.AmberControl, info.ExpectedAmber, info.ArtifactControl,
 			info.CreatureControl, info.Efficiency, info.Disruption,
-			house1, house2, house3, deck.OwnedByMe, deck.Funny, deck.Wishlist,
+			house1, house2, house3, dateAdded, deck.OwnedByMe, deck.Funny,
+			deck.Wishlist,
 			j)
 		if err != nil {
 			return err
@@ -330,16 +340,16 @@ func (s *SQLiteStorage) StoreDecks(
 	return nil
 }
 
-const sqlMyDeckNames string = `
-    SELECT id, name FROM decks
+const sqlMyDeckMD string = `
+    SELECT id, name, date_added FROM decks
     WHERE owned_by_me = 1;
 `
 
-// GetMyDeckNames implements the forgefs.Storage interface.
-func (s *SQLiteStorage) GetMyDeckNames(ctx context.Context) (
-	names map[string]string, err error) {
-	names = make(map[string]string)
-	rows, err := s.db.QueryContext(ctx, sqlMyDeckNames)
+// GetMyDeckMetadata implements the forgefs.Storage interface.
+func (s *SQLiteStorage) GetMyDeckMetadata(ctx context.Context) (
+	mds map[string]forgefs.DeckMetadata, err error) {
+	mds = make(map[string]forgefs.DeckMetadata)
+	rows, err := s.db.QueryContext(ctx, sqlMyDeckMD)
 	if err != nil {
 		return nil, err
 	}
@@ -351,17 +361,22 @@ func (s *SQLiteStorage) GetMyDeckNames(ctx context.Context) (
 	}()
 	for rows.Next() {
 		var id, name string
-		err = rows.Scan(&id, &name)
+		var dateAdded time.Time
+		err = rows.Scan(&id, &name, &dateAdded)
 		if err != nil {
 			return nil, err
 		}
-		names[id] = name
+		mds[id] = forgefs.DeckMetadata{
+			ID:        id,
+			Name:      name,
+			DateAdded: dateAdded,
+		}
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
 
-	return names, nil
+	return mds, nil
 }
 
 func normalizeExpansion(s string) string {
@@ -497,20 +512,20 @@ func filterNodeToSQLConstraint(n *filter.Node) (string, error) {
 }
 
 const sqlMyDeckNamesFilterPrefix string = `
-    SELECT id, name FROM decks
+    SELECT id, name, date_added FROM decks
     WHERE owned_by_me = 1 AND
 `
 
-// GetMyDeckNamesWithFilter implements the forgefs.Storage interface.
-func (s *SQLiteStorage) GetMyDeckNamesWithFilter(
+// GetMyDeckMetadataWithFilter implements the forgefs.Storage interface.
+func (s *SQLiteStorage) GetMyDeckMetadataWithFilter(
 	ctx context.Context, filterRoot *filter.Node) (
-	names map[string]string, err error) {
+	mds map[string]forgefs.DeckMetadata, err error) {
 	constraint, err := filterNodeToSQLConstraint(filterRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	names = make(map[string]string)
+	mds = make(map[string]forgefs.DeckMetadata)
 	rows, err := s.db.QueryContext(ctx, sqlMyDeckNamesFilterPrefix+constraint)
 	if err != nil {
 		return nil, err
@@ -523,17 +538,22 @@ func (s *SQLiteStorage) GetMyDeckNamesWithFilter(
 	}()
 	for rows.Next() {
 		var id, name string
-		err = rows.Scan(&id, &name)
+		var dateAdded time.Time
+		err = rows.Scan(&id, &name, &dateAdded)
 		if err != nil {
 			return nil, err
 		}
-		names[id] = name
+		mds[id] = forgefs.DeckMetadata{
+			ID:        id,
+			Name:      name,
+			DateAdded: dateAdded,
+		}
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
 
-	return names, nil
+	return mds, nil
 }
 
 const sqlDeckJSON string = `
