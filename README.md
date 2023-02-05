@@ -2,12 +2,12 @@
 
 # forgefs -- The Keyforge Filesystem
 
-Finally!  A filesystem that lets you browse all Keyforge cards and all
-the decks you have registered at
-[decksofkeyforge.com](https://decksofkeyforge.com).  forgefs is a
-filesystem that runs on Ubuntu and MacOS that shows up like a thumb
-drive, letting you browse both cards and decks from the command line
-or in your file broswer.
+Finally!  A filesystem that lets you browse all
+(Keyforge)[https://keyforging.com/) cards and all the decks you have
+registered at [decksofkeyforge.com](https://decksofkeyforge.com).
+forgefs is a filesystem that runs on Ubuntu and MacOS that shows up
+like a thumb drive, letting you browse both cards and decks from the
+command line or in your file broswer.
 
 ## Usage
 
@@ -25,7 +25,7 @@ example, we show:
 ![Using forgefs in Linux](https://user-images.githubusercontent.com/8516691/216798897-2cd8fd29-07cd-410f-bf80-7513facddf2c.gif)
 
 You can also see a decklist image for any of your decks, courtesy of
-the amazing [SkyJedi](https://mas.to/@SkyJedi):
+the amazing [SkyJedi](https://github.com/SkyJedi/):
 
 ![Seeing your deck image in Linux](https://user-images.githubusercontent.com/8516691/216798930-21879d31-3be4-40f8-a5a1-ccfc0c48343f.gif)
 
@@ -92,5 +92,68 @@ entries is a full deck directory, where you can access cards and
 decklist images as well.  The only limit on what you can do with that
 is your imagination!
 
-## Install
+## Build/Install
 
+forgefs is written in [Go](https://go.dev/).  Once you install and
+configure Go, it is super easy to install forgefs.  This will download
+the repository and install it in your `$GOPATH/bin` directory:
+
+```sh
+go get github.com/strib/forgefs
+go install github.com/strib/forgefs/forgefs
+```
+
+Alternatively, we will soon provide a pre-built package for
+Debian/Ubuntu.
+
+## Configuration/Run:
+
+The forgefs config file lives by default at
+`$HOME/.forgefs_config.json` (though you can specify an alternate
+config file location on the command line to the `forgefs` binary).
+Before you can run it, you need to generate a decksofkeyforge API key
+for yourself; you can do that
+[here](https://decksofkeyforge.com/about/sellers-and-devs).  Once you
+have your key, create a config file at `$HOME/.forgefs_config.json`
+that looks something like this:
+
+```json
+  {
+    "dok_api_key": "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+  }
+```
+
+where "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" is your real
+decksofkeyforge API key.
+
+By default, the mountpoint for forgefs is `$HOME/ffs`, though that is
+also configurable on the command line or in the config file (with a
+"mountpoint" key).  That directory must exist and be empty before you
+run forgefs.  forgefs also caches data on your file system, by default
+in directory `$HOME/.local/share/forgefs`.  You also need to make that
+directory.
+
+```sh
+mkdir -p $HOME/ffs
+mkdir -p $HOME/.local/share/forgefs/forgefs_images
+```
+
+After that, you're ready to run it!  You can run `forgefs` with no
+command line and starting browsing.
+
+### Debian/Ubuntu
+
+If you've installed our `.deb` package, you can run it with the
+`run_forgefs` command, which starts up forgefs using `systemd` so it
+always runs in the background.  It also creates the appropriate
+directories for you.
+
+## Credit
+
+* [decksofkeyforge.com](https://decksofkeyforge.com) is awesome,
+  consider supporting it on
+  [Patreon](https://www.patreon.com/decksofkeyforge).  It assigns a
+  bunch of statistics to your decks and is also a great deck
+  collection manager, in addition to other things.
+* SkyJedi is an amazing Keyforge community member, consider support
+  him as well on [Patreon](https://www.patreon.com/SkyJedi).
