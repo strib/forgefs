@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
@@ -308,15 +309,24 @@ func (dcd *FSDeckCardsDir) Readdir(ctx context.Context) (
 // FSDeck represents the directory containing info about one deck.
 type FSDeck struct {
 	fs.Inode
-	s  forgefs.Storage
-	da forgefs.DataFetcher
-	im *fsutil.ImageManager
-	id string
+	s         forgefs.Storage
+	da        forgefs.DataFetcher
+	im        *fsutil.ImageManager
+	id        string
+	dateAdded time.Time
 }
 
 var _ fs.InodeEmbedder = (*FSDeck)(nil)
+var _ fs.NodeGetattrer = (*FSDeck)(nil)
 var _ fs.NodeLookuper = (*FSDeck)(nil)
 var _ fs.NodeReaddirer = (*FSDeck)(nil)
+
+// Getattr implements the fs.NodeGetattrer interface.
+func (d *FSDeck) Getattr(
+	ctx context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	out.SetTimes(&d.dateAdded, &d.dateAdded, &d.dateAdded)
+	return 0
+}
 
 func (d *FSDeck) getDeck(ctx context.Context) (*forgefs.Deck, error) {
 	deck, err := d.s.GetDeck(ctx, d.id)
@@ -424,7 +434,7 @@ type FSMyDecksDir struct {
 	da forgefs.DataFetcher
 	im *fsutil.ImageManager
 
-	decks      map[string]string
+	decks      map[string]forgefs.DeckMetadata
 	filterRoot *filter.Node
 }
 
@@ -436,14 +446,14 @@ func NewFSMyDecksDir(
 		s:     s,
 		da:    da,
 		im:    im,
-		decks: make(map[string]string),
+		decks: make(map[string]forgefs.DeckMetadata),
 	}
-	names, err := mdd.s.GetMyDeckNames(ctx)
+	mds, err := mdd.s.GetMyDeckMetadata(ctx)
 	if err != nil {
 		return nil, fs.ToErrno(err)
 	}
-	for id, name := range names {
-		mdd.decks[name] = id
+	for _, md := range mds {
+		mdd.decks[md.Name] = md
 	}
 	return mdd, nil
 }
@@ -458,15 +468,15 @@ func NewFSMyDecksDirWithFilter(
 		s:          s,
 		da:         da,
 		im:         im,
-		decks:      make(map[string]string),
+		decks:      make(map[string]forgefs.DeckMetadata),
 		filterRoot: filterRoot,
 	}
-	names, err := mdd.s.GetMyDeckNamesWithFilter(ctx, filterRoot)
+	mds, err := mdd.s.GetMyDeckMetadataWithFilter(ctx, filterRoot)
 	if err != nil {
 		return nil, fs.ToErrno(err)
 	}
-	for id, name := range names {
-		mdd.decks[name] = id
+	for _, md := range mds {
+		mdd.decks[md.Name] = md
 	}
 	return mdd, nil
 }
@@ -484,7 +494,7 @@ func (mdd *FSMyDecksDir) Lookup(
 		return n, 0
 	}
 
-	id, ok := mdd.decks[name]
+	md, ok := mdd.decks[name]
 	if !ok {
 		// See if it's a filter.
 		filterRoot, err := filter.Parse(name)
@@ -511,13 +521,17 @@ func (mdd *FSMyDecksDir) Lookup(
 		})
 	} else {
 		n = mdd.NewInode(ctx, &FSDeck{
-			s:  mdd.s,
-			da: mdd.da,
-			id: id,
-			im: mdd.im,
+			s:         mdd.s,
+			da:        mdd.da,
+			id:        md.ID,
+			im:        mdd.im,
+			dateAdded: md.DateAdded,
 		}, fs.StableAttr{
 			Mode: syscall.S_IFDIR,
 		})
+
+		// Set the times.
+		out.SetTimes(&md.DateAdded, &md.DateAdded, &md.DateAdded)
 	}
 
 	ok = mdd.AddChild(name, n, false)

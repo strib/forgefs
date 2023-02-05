@@ -52,14 +52,15 @@ type Storage interface {
 	// StoreDecks stores all the given decks, overwriting any existing
 	// decks with the same IDs as the new decks.
 	StoreDecks(ctx context.Context, decks []Deck) error
-	// GetMyDeckNames gets all the decks owned by the user running the
-	// program.  It returns a map of deckID -> deckName.
-	GetMyDeckNames(ctx context.Context) (names map[string]string, err error)
-	// GetMyDeckNamesWithFilter gets all the decks owned by the user,
+	// GetMetadataNames gets all the decks owned by the user running the
+	// program.  It returns a map of deckID -> metadata.
+	GetMyDeckMetadata(ctx context.Context) (
+		mds map[string]DeckMetadata, err error)
+	// GetMyDeckMetadataWithFilter gets all the decks owned by the user,
 	// which also match the given filter. It returns a map of deckID
-	// -> deckName.
-	GetMyDeckNamesWithFilter(ctx context.Context, filterRoot *filter.Node) (
-		names map[string]string, err error)
+	// -> metadata.
+	GetMyDeckMetadataWithFilter(ctx context.Context, filterRoot *filter.Node) (
+		mds map[string]DeckMetadata, err error)
 	// GetDeck returns the full deck object for the given `id`.
 	GetDeck(ctx context.Context, id string) (deck *Deck, err error)
 	// GetSampleDeckWithVersion returns a sample deck and its SAS version.

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
@@ -123,15 +124,23 @@ func (ms *mockStorage) StoreDecks(
 	return nil
 }
 
-func (ms *mockStorage) GetMyDeckNames(_ context.Context) (
-	names map[string]string, err error) {
-	names = make(map[string]string, len(ms.decks))
+func (ms *mockStorage) GetMyDeckMetadata(_ context.Context) (
+	mds map[string]forgefs.DeckMetadata, err error) {
+	mds = make(map[string]forgefs.DeckMetadata, len(ms.decks))
 	for id, d := range ms.decks {
 		if d.OwnedByMe {
-			names[id] = d.DeckInfo.Name
+			dateAdded, err := time.Parse("2006-01-02", d.DeckInfo.DateAdded)
+			if err != nil {
+				return nil, err
+			}
+			mds[id] = forgefs.DeckMetadata{
+				ID:        id,
+				Name:      d.DeckInfo.Name,
+				DateAdded: dateAdded,
+			}
 		}
 	}
-	return names, nil
+	return mds, nil
 }
 
 func mockFilter(n *filter.Node, d forgefs.Deck) (bool, error) {
@@ -194,10 +203,10 @@ func mockFilter(n *filter.Node, d forgefs.Deck) (bool, error) {
 	}
 }
 
-func (ms *mockStorage) GetMyDeckNamesWithFilter(
+func (ms *mockStorage) GetMyDeckMetadataWithFilter(
 	_ context.Context, filterRoot *filter.Node) (
-	names map[string]string, err error) {
-	names = make(map[string]string)
+	mds map[string]forgefs.DeckMetadata, err error) {
+	mds = make(map[string]forgefs.DeckMetadata)
 	for id, d := range ms.decks {
 		if !d.OwnedByMe {
 			continue
@@ -208,10 +217,18 @@ func (ms *mockStorage) GetMyDeckNamesWithFilter(
 			return nil, err
 		}
 		if match {
-			names[id] = d.DeckInfo.Name
+			dateAdded, err := time.Parse("2006-01-02", d.DeckInfo.DateAdded)
+			if err != nil {
+				return nil, err
+			}
+			mds[id] = forgefs.DeckMetadata{
+				ID:        id,
+				Name:      d.DeckInfo.Name,
+				DateAdded: dateAdded,
+			}
 		}
 	}
-	return names, nil
+	return mds, nil
 }
 
 func (ms *mockStorage) GetSampleDeckWithVersion(ctx context.Context) (
@@ -315,13 +332,16 @@ func makeCard(id, title, url string) forgefs.Card {
 	}
 }
 
-func makeDeck(id, name string, mine bool, a, e float64) forgefs.Deck {
+func makeDeck(
+	id, name string, mine bool, a, e float64,
+	dateAdded time.Time) forgefs.Deck {
 	return forgefs.Deck{
 		DeckInfo: forgefs.DeckInfo{
 			AmberControl:  a,
 			ExpectedAmber: e,
 			KeyforgeID:    id,
 			Name:          name,
+			DateAdded:     dateAdded.Format("2006-01-02"),
 		},
 		OwnedByMe: mine,
 	}
@@ -346,11 +366,15 @@ func TestFSSimple(t *testing.T) {
 	d1ID := "3"
 	d1Name := "deck1"
 	d1Image := []byte{3, 4, 1, 2}
-	d1 := makeDeck(d1ID, d1Name, true, 10, 20)
+	d1DateAdded, err := time.Parse("2006-01-02", "2023-01-01")
+	require.NoError(t, err)
+	d1 := makeDeck(d1ID, d1Name, true, 10, 20, d1DateAdded)
 	d2ID := "4"
 	d2Name := "deck2"
 	d2Image := []byte{4, 1, 2, 3}
-	d2 := makeDeck(d2ID, d2Name, true, 3, 30)
+	d2DateAdded, err := time.Parse("2006-01-02", "2023-01-02")
+	require.NoError(t, err)
+	d2 := makeDeck(d2ID, d2Name, true, 3, 30, d2DateAdded)
 
 	decks := []forgefs.Deck{d1, d2}
 	mdf.myDecks = map[string]forgefs.Deck{
@@ -367,7 +391,7 @@ func TestFSSimple(t *testing.T) {
 		d2ID: d2Image,
 	}
 
-	err := ms.StoreCards(ctx, mdf.cards)
+	err = ms.StoreCards(ctx, mdf.cards)
 	require.NoError(t, err)
 	err = ms.StoreDecks(ctx, decks)
 	require.NoError(t, err)
@@ -399,15 +423,26 @@ func TestFSSimple(t *testing.T) {
 	mountTmpDir(t, mountpoint, root)
 
 	// Check the root dir.
-	checkDir := func(dir string, expectedNames []string) {
+	checkDirWithTimestamps := func(
+		dir string, expectedNames []string,
+		expectedTimestamps map[string]time.Time) {
 		entries, err := os.ReadDir(dir)
 		require.NoError(t, err)
 		require.Len(t, entries, len(expectedNames))
 		names := make([]string, len(expectedNames))
 		for i, e := range entries {
 			names[i] = e.Name()
+			et, ok := expectedTimestamps[e.Name()]
+			if ok {
+				info, err := e.Info()
+				require.NoError(t, err)
+				require.Equal(t, et.UTC(), info.ModTime().UTC())
+			}
 		}
 		require.ElementsMatch(t, expectedNames, names)
+	}
+	checkDir := func(dir string, expectedNames []string) {
+		checkDirWithTimestamps(dir, expectedNames, nil)
 	}
 	checkDir(mountpoint, []string{fsutil.CardsDir, fsutil.MyDecksDir})
 
@@ -443,7 +478,12 @@ func TestFSSimple(t *testing.T) {
 
 	// Check my-decks dir.
 	decksDir := filepath.Join(mountpoint, fsutil.MyDecksDir)
-	checkDir(decksDir, []string{d1Name, d2Name})
+	checkDirWithTimestamps(
+		decksDir, []string{d1Name, d2Name},
+		map[string]time.Time{
+			d1Name: d1DateAdded,
+			d2Name: d2DateAdded,
+		})
 
 	// Check deck dir.
 	d1Dir := filepath.Join(decksDir, d1Name)
